@@ -5,16 +5,20 @@
 # 3) sstDateTime as a VARIABLE necessary? why not just timestamp the sst variable like normal?
 # 4) how to deal with WC light data?
 
-
-
 ## after formulating flatfile:
 # check for rows that are completely duplicated (with or without the same VariableValue)
 # check for outliers in variablevalue
 # cut based on start/end timestamps
 
 ## questions for WC:
-# way to recover histos bins if you dont have config file (pre-portal config)
-# how does status source work in -SST
+
+
+## left to build in:
+# what about recovered WC tags (-Archival)? probably swamp out most of other metrics? or in addition to?
+# microwave
+# lotek
+# WC SPOT
+# SST, Histos, LightLoc
 
 
 # give the function a row of metadata and a directory
@@ -31,22 +35,6 @@ obsTypes <- gdata::read.xls(tFile, sheet='ObservationTypes')
 
 # use meta function to build the header
 
-#------------------------
-## given a PSAT directory:
-#------------------------
-
-# use lightloc function (skip for now?)
-
-# GPE3 - the source of this would be reflected in the metadata specific to the PSAT tag
-
-#------------------------
-## given a SPOT directory:
-#------------------------
-
-# use argos-locations function - the source of this would be reflected in the metadata specific to the SPOT tag
-
-
-
 
 
 
@@ -56,40 +44,6 @@ obsTypes <- gdata::read.xls(tFile, sheet='ObservationTypes')
 tFile <- tempfile()
 curl::curl_download(url="https://github.com/tagbase/tagbase/blob/master/eTUFF-ObservationTypes.xlsx?raw=true", destfile = tFile)
 obsTypes <- gdata::read.xls(tFile, sheet='ObservationTypes')
-
-#--------------------------
-## WC PDT - depth temp profile data
-#--------------------------
-pdt <- read.wc(filename = paste(myDir, ptt, '-PDTs.csv',sep=''), type = 'pdt', tag=tag, pop=pop)$data
-nms <- names(pdt)
-nms[grep('MinTemp', nms)] <- 'TempMin'
-nms[grep('MaxTemp', nms)] <- 'TempMax'
-names(pdt) <- nms
-pdt <- melt(pdt, id.vars=c('Date','BinNum'), measure.vars = c('Depth','TempMin','TempMax'))
-
-binchar <- pdt$BinNum
-for (i in 1:length(binchar)) if (nchar(binchar[i]) < 2) binchar[i] <- paste('0', binchar[i], sep='')
-pdt$VariableName <- paste('Pdt', pdt$variable, binchar, sep='')
-
-pdt.new <- merge(x = pdt, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
-pdt.new <- pdt.new[,c('Date','VariableID','value','VariableName','VariableUnits')]
-names(pdt.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
-pdt.new <- pdt.new[order(pdt.new$DateTime, pdt.new$VariableID),]
-
-#--------------------------
-## WC SERIES
-#--------------------------
-# if series exists we load it
-series <- read.table(paste(myDir, ptt, '-Series.csv', sep=''), sep=',', header=T, blank.lines.skip = F)
-series <- getSeriesTemp(series, pdt, results, flag = T)
-
-series$dt <- parse_date_time(paste(series$day, series$time), orders='dby HMS', tz='UTC')
-#series <- series[,c(2,19,16,11:13)]
-series <- series[,c('ptt','dt','doy','depth','temperature')]
-
-
-#=============================
-#=============================
 
 ## get these from meta header...
 # TAG/POPUP DATES AND LOCATIONS (dd, mm, YYYY, lat, lon)
@@ -101,6 +55,23 @@ tag <- as.POSIXct(paste(iniloc[1,1], '/', iniloc[1,2], '/', iniloc[1,3], sep='')
 pop <- as.POSIXct(paste(iniloc[2,1], '/', iniloc[2,2], '/', iniloc[2,3], sep=''), format = '%d/%m/%Y', tz='UTC')
 # VECTOR OF DATES FROM DATA. THIS WILL BE THE TIME STEPS, T, IN THE LIKELIHOODS
 dateVec <- as.Date(seq(tag, pop, by = 'day'))
+
+
+
+
+#------------------------
+## given a SPOT directory:
+#------------------------
+
+# use argos-locations function - the source of this would be reflected in the metadata specific to the SPOT tag
+
+
+
+
+
+#------------------------
+## given a PSAT directory:
+#------------------------
 
 #--------------------------
 ## WC PDT - depth temp profile data
@@ -333,8 +304,56 @@ if (fe){
 
 }
 
+#------------
+## GPE3 - the source of these positions, in this case GPE3, would be reflected in the metadata specific to the PSAT tag as "modeled" and "GPE3"
+
+fe <- file.exists(paste('~/work/Data/meso/', tolower(meta$speciescode[i]), '/', meta$ptt[i], '/', meta$ptt[i], '-Histos.csv', sep=''))
+
+if (fe){
+  setwd(myDir)
+  ncFile <- list.files()[grep('.nc', list.files())]
+  csvFile <- list.files()[grep('GPE3.csv',list.files())]
+
+  out <- getCtr_gpe3(ncFile, csvFile, threshold=50, makePlot=F)
+  df <- lapply(out, FUN=function(x) cbind(x$loc, x$xDist, x$yDist))
+  df <- rlist::list.rbind(df)
+  names(df) <- c('ptt','date','lat','lon','xDist','yDist')
+
+  # organize mmd.new for flatfile format
+  gpe <- df
+  nms <- names(gpe)
+  nms[grep('lon', nms)] <- 'longitude'
+  nms[grep('lat', nms)] <- 'latitude'
+  nms[grep('xDist', nms)] <- 'longitudeError'
+  nms[grep('yDist', nms)] <- 'latitudeError'
+  names(gpe) <- nms
+  # summarize with melt
+  gpe <- melt(gpe, id.vars=c('date'), measure.vars = c('longitude','latitude','longitudeError','latitudeError'))
+  gpe$VariableName <- gpe$variable
+
+  # merge with obs types and do some formatting
+  gpe <- merge(x = gpe, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+  gpe <- gpe[,c('date','VariableID','value','VariableName','VariableUnits')]
+  names(gpe) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+  gpe <- gpe[order(gpe$DateTime, gpe$VariableID),]
+  gpe <- gpe[which(!is.na(gpe$VariableValue)),]
+  gpe$DateTime <- as.POSIXct(gpe$DateTime, tz='UTC')
+  gpe$DateTime <- format(gpe$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+
+}
+rm(fe)
+
+
 
 ## MIX LAYER?
+
+
+# use lightloc function (skip for now?)
+
+
+
+
+
 
 
 
