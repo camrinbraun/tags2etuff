@@ -46,8 +46,10 @@ build_meta_head <- function(meta_row, filename, global_attributes=NULL){
   if (any(!(metaTypes$AttributeID[which(metaTypes$Necessity == 'required')] %in% meta.new$AttributeID))){
     idx <- which(metaTypes$Necessity == 'required')
     idx <- idx[!(metaTypes$AttributeID[idx] %in% meta.new2$AttributeID)]
-    missingVars <- metaTypes[idx,]
-    stop('missing required variables. The missing vars have been output as "missingVars".')
+    missingVars <- metaTypes[idx, c(1:3)]
+    e <- simpleError('missing required metadata attributes. The missing attributes have been printed to the console. To store as variable you can run foo <- build_meta_head().')
+    tryCatch(stop(e), finally = return(missingVars))
+
   }
 
   meta.new <- meta.new[,c('Category','AttributeID','variable','value')]
