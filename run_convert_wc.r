@@ -8,13 +8,10 @@
 # check for outliers in variablevalue
 # cut based on start/end timestamps
 
-## questions for WC:
-
 
 ## left to build in:
 # what about recovered WC tags (-Archival)? probably swamp out most of other metrics? or in addition to?
 # SST, Histos, LightLoc
-
 
 # give the function a row of metadata and a directory
 ## the function gets necessary info from meta like tag type, start/end, etc.
@@ -31,13 +28,12 @@ meta <- read.table('~/work/Data/all_tag_meta.csv', sep=',', header=T, blank.line
 
 # identify appropriate meta row (?)
 meta <- meta[which(meta$uid == 1),]
-meta$time_coverage_start <- as.POSIXct(meta$time_coverage_start, format='%m/%d/%y', tz='UTC')
-meta$time_coverage_end <- as.POSIXct(meta$time_coverage_end, format='%m/%d/%y', tz='UTC')
+meta$time_coverage_start <- as.character(as.POSIXct(meta$time_coverage_start, format='%m/%d/%y', tz='UTC'), format='%Y-%m-%d %H:%M:%S')
+meta$time_coverage_end <- as.character(as.POSIXct(meta$time_coverage_end, format='%m/%d/%y', tz='UTC'), format='%Y-%m-%d %H:%M:%S')
 
 # use meta function to build the header
 
 build_meta_head(meta_row = meta, filename = paste('eTUFF_', meta$platform, '_', meta$ptt, '.txt', sep=''))
-
 
 ## get these from meta header...
 # TAG/POPUP DATES AND LOCATIONS (dd, mm, YYYY, lat, lon)
@@ -246,7 +242,7 @@ if (fe & !exists(arch.new)){
   # if series exists we load it
   series <- read.table(paste('~/work/Data/meso/', tolower(meta$speciescode[i]),
                              '/', meta$ptt[i], '/', meta$ptt[i], '-Series.csv', sep=''), sep=',', header=T, blank.lines.skip = F)
-  #series$dt <- parse_date_time(paste(series$Day, series$Time), orders='dby HMS', tz='UTC')
+  series$dt <- lubridate::parse_date_time(paste(series$Day, series$Time), orders='dby HMS', tz='UTC')
 
   # organize series.new for flatfile format
   series.new <- subset(series, select=-c(DepthSensor))
@@ -257,7 +253,7 @@ if (fe & !exists(arch.new)){
   nms[grep('TRange', nms)] <- 'tempStDev'
   names(series.new) <- nms
   # summarize with melt
-  series.new <- melt(series.new, id.vars=c('dt'), measure.vars = c('depthMean','depthStDev','tempMean','tempStDev'))
+  series.new <- reshape2::melt(series.new, id.vars=c('dt'), measure.vars = c('depthMean','depthStDev','tempMean','tempStDev'))
   series.new$VariableName <- series.new$variable
 
   # merge with obs types and do some formatting

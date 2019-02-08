@@ -29,7 +29,7 @@
 #' build_meta_head(meta_row = meta[1,], filename = 'eTUFF_example.txt', global_attributes = g_atts)
 #' }
 
-build_meta_head <- function(meta_row, filename, global_attributes=NULL){
+build_meta_head <- function(meta_row, filename, global_attributes = NULL){
 
   # melt cols to rows
   meta.new <- reshape2::melt(meta, id.vars=c('uid_no'))
@@ -60,8 +60,10 @@ build_meta_head <- function(meta_row, filename, global_attributes=NULL){
 
   ## add global atts, if any
   hdr <- paste('// global attributes:',sep='')
-  for (ii in 1:length(global_attributes)){
+  if(!is.null(global_attributes)){
+    for (ii in 1:length(global_attributes)){
     hdr[(length(hdr)+1)] <- paste('  :', global_attributes[ii], sep='')
+    }
   }
 
   idx <- which(meta.new$Category == 'instrument')
@@ -130,7 +132,7 @@ build_meta_head <- function(meta_row, filename, global_attributes=NULL){
   cat(hdr, file = filename, sep='\n')
 
   # later append the data to this header like below:
-  #write.table(argos.new, file='try-meta-hdr.txt', sep=',', append=TRUE, col.names = F, row.names = F, quote = F)
+  #write.table(series.new, file=filename, sep=',', append=TRUE, col.names = F, row.names = F, quote = F)
 
 
 }
