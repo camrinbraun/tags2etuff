@@ -1,9 +1,7 @@
 
 ## changes to ObservationTypes
-# 1) need to account for accuracy of depth/temp measurements (at lesat by WC). this isn't the same as the current stdev metric
-# 2) comment that WC often has mixed layer metrics although perhaps not worth adding to obs types?
-# 3) sstDateTime as a VARIABLE necessary? why not just timestamp the sst variable like normal?
-# 4) how to deal with WC light data?
+# - comment that WC often has mixed layer metrics although perhaps not worth adding to obs types?
+# - how to deal with WC light data?
 
 ## after formulating flatfile:
 # check for rows that are completely duplicated (with or without the same VariableValue)
@@ -15,8 +13,6 @@
 
 ## left to build in:
 # what about recovered WC tags (-Archival)? probably swamp out most of other metrics? or in addition to?
-# microwave
-# lotek
 # SST, Histos, LightLoc
 
 
@@ -30,22 +26,28 @@ tFile <- tempfile()
 curl::curl_download(url="https://github.com/tagbase/tagbase/blob/master/eTUFF-ObservationTypes.xlsx?raw=true", destfile = tFile)
 obsTypes <- gdata::read.xls(tFile, sheet='ObservationTypes')
 
+# load meta
+meta <- read.table('~/work/Data/all_tag_meta.csv', sep=',', header=T, blank.lines.skip = F, skip=1)
+
 # identify appropriate meta row (?)
+meta <- meta[which(meta$uid == 1),]
+meta$time_coverage_start <- as.POSIXct(meta$time_coverage_start, format='%m/%d/%y', tz='UTC')
+meta$time_coverage_end <- as.POSIXct(meta$time_coverage_end, format='%m/%d/%y', tz='UTC')
 
 # use meta function to build the header
 
+build_meta_head(meta_row = meta, filename = paste('eTUFF_', meta$platform, '_', meta$ptt, '.txt', sep=''))
+
+
 ## get these from meta header...
 # TAG/POPUP DATES AND LOCATIONS (dd, mm, YYYY, lat, lon)
-tagyr <- lubridate::year(meta$tagdate[i])
-iniloc <- data.frame(matrix(c(day(meta$tagdate[i]), month(meta$tagdate[i]), year(meta$tagdate[i]), meta$taglat[i], meta$taglon[i],
+iniloc <- data.frame(matrix(c(day(meta$time_coverage_start[i]), month(meta$time_coverage_start[i]), year(meta$time_coverage_start[i]), meta$geospatial_lat_start[i], meta$geospatial_lon_start[i],
                               day(meta$popdate[i]), month(meta$popdate[i]), year(meta$popdate[i]), meta$poplat[i], meta$poplon[i]), nrow = 2, ncol = 5, byrow = T))
 colnames(iniloc) = list('day','month','year','lat','lon')
 tag <- as.POSIXct(paste(iniloc[1,1], '/', iniloc[1,2], '/', iniloc[1,3], sep=''), format = '%d/%m/%Y', tz='UTC')
 pop <- as.POSIXct(paste(iniloc[2,1], '/', iniloc[2,2], '/', iniloc[2,3], sep=''), format = '%d/%m/%Y', tz='UTC')
 # VECTOR OF DATES FROM DATA. THIS WILL BE THE TIME STEPS, T, IN THE LIKELIHOODS
 dateVec <- as.Date(seq(tag, pop, by = 'day'))
-
-
 
 
 #------------------------
@@ -69,9 +71,10 @@ if (fe){
   names(argos.new) <- nms
   argos.new$date <- as.POSIXct(argos.new$date, format='%H:%M:%S %d-%b-%Y', tz='UTC')
   argos.new <- reshape2::melt(argos.new, id.vars=c('date'), measure.vars = c('argosLC','argosErrMaj','argosErrMin','argosErrOrient'))
+  argos.new$VariableName <- argos.new$variable
 
   argos.new <- merge(x = argos.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
-  argos.new <- argos.new[,c('Date','VariableID','value','VariableName','VariableUnits')]
+  argos.new <- argos.new[,c('date','VariableID','value','VariableName','VariableUnits')]
   names(argos.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
   argos.new <- argos.new[order(argos.new$DateTime, argos.new$VariableID),]
   argos.new$DateTime <- as.POSIXct(argos.new$DateTime, tz='UTC')
