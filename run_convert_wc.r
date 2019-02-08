@@ -17,7 +17,6 @@
 # what about recovered WC tags (-Archival)? probably swamp out most of other metrics? or in addition to?
 # microwave
 # lotek
-# WC SPOT
 # SST, Histos, LightLoc
 
 
@@ -34,16 +33,6 @@ obsTypes <- gdata::read.xls(tFile, sheet='ObservationTypes')
 # identify appropriate meta row (?)
 
 # use meta function to build the header
-
-
-
-
-
-
-
-tFile <- tempfile()
-curl::curl_download(url="https://github.com/tagbase/tagbase/blob/master/eTUFF-ObservationTypes.xlsx?raw=true", destfile = tFile)
-obsTypes <- gdata::read.xls(tFile, sheet='ObservationTypes')
 
 ## get these from meta header...
 # TAG/POPUP DATES AND LOCATIONS (dd, mm, YYYY, lat, lon)
@@ -64,6 +53,32 @@ dateVec <- as.Date(seq(tag, pop, by = 'day'))
 #------------------------
 
 # use argos-locations function - the source of this would be reflected in the metadata specific to the SPOT tag
+fe <- file.exists(paste('~/work/Data/meso/', tolower(meta$speciescode[i]), '/', meta$ptt[i], '/', meta$ptt[i], '-Locations.csv', sep=''))
+
+if (fe){
+  argos <- read.table(paste('~/work/Data/meso/', tolower(meta$speciescode[i]),
+                             '/', meta$ptt[i], '/', meta$ptt[i], '-Locations.csv', sep=''), sep=',', header=T, blank.lines.skip = F)
+
+  # organize argos.new for flatfile format
+  argos.new <- argos[which(argos$Type != 'User'),]
+  nms <- tolower(names(argos.new))
+  nms[grep('error.semi.major.axis', nms)] <- 'argosErrMaj'
+  nms[grep('error.semi.minor.axis', nms)] <- 'argosErrMin'
+  nms[grep('error.ellipse.orientation', nms)] <- 'argosErrOrient'
+  nms[grep('quality', nms)] <- 'argosLC'
+  names(argos.new) <- nms
+  argos.new$date <- as.POSIXct(argos.new$date, format='%H:%M:%S %d-%b-%Y', tz='UTC')
+  argos.new <- reshape2::melt(argos.new, id.vars=c('date'), measure.vars = c('argosLC','argosErrMaj','argosErrMin','argosErrOrient'))
+
+  argos.new <- merge(x = argos.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+  argos.new <- argos.new[,c('Date','VariableID','value','VariableName','VariableUnits')]
+  names(argos.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+  argos.new <- argos.new[order(argos.new$DateTime, argos.new$VariableID),]
+  argos.new$DateTime <- as.POSIXct(argos.new$DateTime, tz='UTC')
+  argos.new$DateTime <- format(argos.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+
+}
+rm(fe)
 
 
 
@@ -104,12 +119,44 @@ if (fe){
 rm(fe)
 
 #--------------------------
-## WC SERIES - depth and sometimes temperature
+## WC ARCHIVAL - depth, temperature, light
 #--------------------------
-
-fe <- file.exists(paste('~/work/Data/meso/', tolower(meta$speciescode[i]), '/', meta$ptt[i], '/', meta$ptt[i], '-Series.csv', sep=''))
+fe <- file.exists(paste('~/work/Data/meso/', tolower(meta$speciescode[i]), '/', meta$ptt[i], '/', meta$ptt[i], '-Archive.csv', sep=''))
 
 if (fe){
+  # if series exists we load it
+  arch <- read.table(paste('~/work/Data/meso/', tolower(meta$speciescode[i]),
+                             '/', meta$ptt[i], '/', meta$ptt[i], '-Series.csv', sep=''), sep=',', header=T, blank.lines.skip = F)
+  arch$dt <- as.POSIXct(arch$Time, format=HMMoce::findDateFormat(arch$Time), tz='UTC')
+
+  # organize arch.new for flatfile format
+  arch.new <- subset(arch, select=-c(One.Minute.Light.Level, Smoothed.Light.Level))
+  nms <- names(arch.new)
+  nms[grep('Depth', nms)] <- 'depth'
+  nms[grep('Temperature', nms)] <- 'temperature'
+  nms[grep('Light.Level', nms)] <- 'light'
+  names(arch.new) <- nms
+  # summarize with melt
+  arch.new <- reshape2::melt(arch.new, id.vars=c('dt'), measure.vars = c('depth','temperature','light'))
+  arch.new$VariableName <- arch.new$variable
+
+  # merge with obs types and do some formatting
+  arch.new <- merge(x = arch.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+  arch.new <- arch.new[,c('dt','VariableID','value','VariableName','VariableUnits')]
+  names(arch.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+  arch.new <- arch.new[order(arch.new$DateTime, arch.new$VariableID),]
+  arch.new <- arch.new[which(!is.na(arch.new$VariableValue)),]
+  arch.new$DateTime <- as.POSIXct(arch.new$DateTime, tz='UTC')
+  arch.new$DateTime <- format(arch.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+}
+rm(fe)
+
+#--------------------------
+## WC SERIES - depth and sometimes temperature
+#--------------------------
+fe <- file.exists(paste('~/work/Data/meso/', tolower(meta$speciescode[i]), '/', meta$ptt[i], '/', meta$ptt[i], '-Series.csv', sep=''))
+
+if (fe & !exists(arch.new)){
   # if series exists we load it
   series <- read.table(paste('~/work/Data/meso/', tolower(meta$speciescode[i]),
                              '/', meta$ptt[i], '/', meta$ptt[i], '-Series.csv', sep=''), sep=',', header=T, blank.lines.skip = F)
