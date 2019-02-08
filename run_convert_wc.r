@@ -81,32 +81,95 @@ if (fe){
 rm(fe)
 
 
-
-mti <- gdata::read.xls(paste(ptt, '_HR.xls', sep=''), sheet='Archival Data', skip=2,
-                       colClasses = c(rep(NA,7), rep('NULL', 4)),
-                       header=F)
-names(mti) <- c('DateTime', 'tempval','pressureval','lightval','temperature','depth','light')
-mti$DateTime <- as.POSIXct(mti$DateTime, format=HMMoce::findDateFormat(mti$DateTime), tz='UTC')
-
-# summarize with melt
-mti.new <- reshape2::melt(mti, id.vars=c('DateTime'), measure.vars = c('temperature','depth','light'))
-mti.new$VariableName <- mti.new$variable
-
-# merge with obs types and do some formatting
-mti.new <- merge(x = mti.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
-mti.new <- mti.new[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
-names(mti.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
-mti.new <- mti.new[order(mti.new$DateTime, mti.new$VariableID),]
-#mti.new <- mti.new[which(!is.na(mti.new$VariableValue)),]
-mti.new$DateTime <- as.POSIXct(mti.new$DateTime, tz='UTC')
-mti.new$DateTime <- format(mti.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
-
-# convert to positive depth values
-mti.new$VariableValue[which(mti.new$VariableName=='depth')] <- abs(mti.new$VariableValue[which(mti.new$VariableName=='depth')])
-
 #------------------------
 ## given a PSAT directory:
 #------------------------
+
+#--------------------------
+## MTI PSAT - time series data
+#--------------------------
+
+fe <- file.exists(paste('~/work/Data/meso/', tolower(meta$speciescode[i]), '/', meta$ptt[i], '/', meta$ptt[i], '-PDTs.csv', sep=''))
+
+if (fe){
+  mti <- gdata::read.xls(paste(ptt, '_HR.xls', sep=''), sheet='Archival Data', skip=2,
+                         colClasses = c(rep(NA,7), rep('NULL', 4)),
+                         header=F)
+  names(mti) <- c('DateTime', 'tempval','pressureval','lightval','temperature','depth','light')
+  mti$DateTime <- as.POSIXct(mti$DateTime, format=HMMoce::findDateFormat(mti$DateTime), tz='UTC')
+
+  # summarize with melt
+  mti.new <- reshape2::melt(mti, id.vars=c('DateTime'), measure.vars = c('temperature','depth','light'))
+  mti.new$VariableName <- mti.new$variable
+
+  # merge with obs types and do some formatting
+  mti.new <- merge(x = mti.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+  mti.new <- mti.new[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
+  names(mti.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+  mti.new <- mti.new[order(mti.new$DateTime, mti.new$VariableID),]
+  #mti.new <- mti.new[which(!is.na(mti.new$VariableValue)),]
+  mti.new$DateTime <- as.POSIXct(mti.new$DateTime, tz='UTC')
+  mti.new$DateTime <- format(mti.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+
+  # convert to positive depth values
+  mti.new$VariableValue[which(mti.new$VariableName=='depth')] <- abs(mti.new$VariableValue[which(mti.new$VariableName=='depth')])
+
+}
+rm(fe)
+
+#--------------------------
+## LOTEK PSAT - time series data
+#--------------------------
+
+fe <- file.exists(paste('~/work/Data/meso/', tolower(meta$speciescode[i]), '/', meta$ptt[i], '/', meta$ptt[i], '-PDTs.csv', sep=''))
+
+if (fe){
+  lotek <- data.frame(readRDS('~/work/RData/FurukawaS/RegularLog_YT20070605_D2070.RDS'))
+  names(lotek) <- c('DateTime', 'depth','temperature','light')
+  lotek$DateTime <- as.POSIXct(lotek$DateTime, format=HMMoce::findDateFormat(lotek$DateTime), tz='UTC')
+
+  # summarize with melt
+  lotek.new <- reshape2::melt(lotek, id.vars=c('DateTime'), measure.vars = c('temperature','depth','light'))
+  lotek.new$VariableName <- lotek.new$variable
+
+  # merge with obs types and do some formatting
+  lotek.new <- merge(x = lotek.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+  lotek.new <- lotek.new[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
+  names(lotek.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+  lotek.new <- lotek.new[order(lotek.new$DateTime, lotek.new$VariableID),]
+  #lotek.new <- lotek.new[which(!is.na(lotek.new$VariableValue)),]
+  lotek.new$DateTime <- as.POSIXct(lotek.new$DateTime, tz='UTC')
+  lotek.new$DateTime <- format(lotek.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+
+}
+rm(fe)
+
+#--------------------------
+## LOTEK PSAT - raw position data
+#--------------------------
+
+fe <- file.exists(paste('~/work/Data/meso/', tolower(meta$speciescode[i]), '/', meta$ptt[i], '/', meta$ptt[i], '-PDTs.csv', sep=''))
+
+if (fe){
+  lotek <- data.frame(readRDS('~/work/RData/FurukawaS/DayLog_YT20070605_D2070.RDS'))
+  names(lotek) <- c('DateTime', 'longitude','latitude')
+  lotek$DateTime <- as.POSIXct(lotek$DateTime, format=HMMoce::findDateFormat(lotek$DateTime), tz='UTC')
+
+  # summarize with melt
+  lotek.new <- reshape2::melt(lotek, id.vars=c('DateTime'), measure.vars = c('longitude','latitude'))
+  lotek.new$VariableName <- lotek.new$variable
+
+  # merge with obs types and do some formatting
+  lotek.new <- merge(x = lotek.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+  lotek.new <- lotek.new[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
+  names(lotek.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+  lotek.new <- lotek.new[order(lotek.new$DateTime, lotek.new$VariableID),]
+  #lotek.new <- lotek.new[which(!is.na(lotek.new$VariableValue)),]
+  lotek.new$DateTime <- as.POSIXct(lotek.new$DateTime, tz='UTC')
+  lotek.new$DateTime <- format(lotek.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+
+}
+rm(fe)
 
 #--------------------------
 ## WC PDT - depth temp profile data
