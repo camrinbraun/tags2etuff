@@ -467,10 +467,6 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL){
 
     #------------
     ## SST
-    ## for WC mP's: if SST source = MixLayer then the value is an SST summary (mean?) integrated over the summary period
-    ##              if SST source = TimeSeries then its discrete SST measurement with timestamp however depth may not be full resolution depending on how it was encoded in the source
-    ##              if SST source = LightLoc then discrete SST measurements and depth at full resolution
-    ##              if SST source = Status then it used a discrete status message temperature. But the timestamp in the SST file will be rounded to the nearest summary period.
 
     fList <- list.files(dir, full.names = T)
     fidx <- grep('-SST.csv', fList)
@@ -491,27 +487,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL){
       sst$dt <- lubridate::parse_date_time(sst$Date, orders='HMS dbY', tz='UTC')
       sst <- sst[which(sst$dt >= dates[1] & sst$dt <= dates[2]),]
 
-      # organize mmd.new for flatfile format
-      #mmd.new <- subset(mmd, select=-c(DepthSensor))
-      sst.new <- sst
-      nms <- names(sst.new)
-      nms[grep('MinDepth', nms)] <- 'depthMin'
-      #nms[grep('MinAccuracy', nms)] <- 'depthMinAcc'
-      nms[grep('MaxDepth', nms)] <- 'depthMax'
-      #nms[grep('TRange', nms)] <- 'depthMaxAcc'
-      names(sst.new) <- nms
-      # summarize with melt
-      sst.new <- reshape2::melt(sst.new, id.vars=c('dt'), measure.vars = c('depthMin','depthMax'))
-      sst.new$VariableName <- sst.new$variable
-
-      # merge with obs types and do some formatting
-      sst.new <- merge(x = sst.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
-      sst.new <- sst.new[,c('dt','VariableID','value','VariableName','VariableUnits')]
-      names(sst.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
-      sst.new <- sst.new[order(sst.new$DateTime, sst.new$VariableID),]
-      #sst.new <- sst.new[which(!is.na(sst.new$VariableValue)),]
-      sst.new$DateTime <- as.POSIXct(sst.new$DateTime, tz='UTC')
-      sst.new$DateTime <- format(sst.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+      sst.new <- parse_sst(sst)
 
       if (exists('returnData')){
         returnData <- rbind(returnData, sst.new)
