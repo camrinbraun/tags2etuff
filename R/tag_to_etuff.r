@@ -3,9 +3,10 @@
 #' @param manufacturer is character indicating tag manufacturer. Choices are 'Wildlife','Microwave','Lotek'.
 #' @param tagtype is character. Choices are 'PSAT', 'SPOT', ...
 #' @param fName is character indicating the file name of interest to read. This is currently only used for reading archival data from Microwave or Lotek tags.
+#' @param dates is POSIXct vector of length 2 indicating start and stop dates for the tag data of interest
 #'
 
-tag_to_etuff <- function(dir, manufacturer, tagtype, fName = NULL){
+tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL){
 
 #------------------------
 ## checking before we start
@@ -38,6 +39,9 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, fName = NULL){
 
   }
 
+  # check dates
+  #if (class(dates)[1] != 'POSIXct') stop('input dates must be POSIXct')
+
 #------------------------
 ## given a SPOT directory:
 #------------------------
@@ -66,6 +70,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, fName = NULL){
       nms[grep('quality', nms)] <- 'argosLC'
       names(argos.new) <- nms
       argos.new$date <- as.POSIXct(argos.new$date, format='%H:%M:%S %d-%b-%Y', tz='UTC')
+      argos.new <- argos.new[which(argos.new$date > dates[1] & argos.new$date < dates[2]),]
       argos.new <- reshape2::melt(argos.new, id.vars=c('date'), measure.vars = c('argosLC','argosErrMaj','argosErrMin','argosErrOrient'))
       argos.new$VariableName <- argos.new$variable
 
@@ -92,7 +97,10 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, fName = NULL){
   #--------------------------
   ## MTI PSAT - time series data
   #--------------------------
+
   if (tagtype == 'PSAT' & manufacturer == 'Microwave'){
+    print('Reading Microwave PSAT for vertical data...')
+
     if (is.null(fName)) stop('fName must be specified if manufacturer is Microwave.')
 
     fList <- list.files(dir)
@@ -112,6 +120,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, fName = NULL){
                              header=F)
       names(mti) <- c('DateTime', 'tempval','pressureval','lightval','temperature','depth','light')
       mti$DateTime <- as.POSIXct(mti$DateTime, format=HMMoce::findDateFormat(mti$DateTime), tz='UTC')
+      mti <- mti[which(mti$DateTime >= dates[1] & mti$DateTime <= dates[2]),]
 
       # summarize with melt
       mti.new <- reshape2::melt(mti, id.vars=c('DateTime'), measure.vars = c('temperature','depth','light'))
@@ -134,104 +143,114 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, fName = NULL){
       } else {
         returnData <- mti.new
       }
+    } # end fe
+  } # end if tagtype
+  rm(fe)
+
+  #--------------------------
+  ## LOTEK PSAT - time series data
+  #--------------------------
+
+  if (tagtype == 'PSAT' & manufacturer == 'Lotek'){
+    print('Reading Lotek PSAT for vertical data...')
+
+    if (is.null(fName)) stop('fName must be specified if manufacturer is Lotek')
+
+    fList <- list.files(dir)
+    fidx <- grep(fName, fList)
+    if (length(fidx) == 0){
+      break
+    } else if (length(fidx) > 1){
+      stop(paste(length(fidx), 'files match', fName, 'in the current directory. Ensure there are no duplicated extensions and try again.'))
+    } else if (length(fidx) == 1){
+      fe <- TRUE
     }
-    rm(fe)
 
-    #--------------------------
-    ## LOTEK PSAT - time series data
-    #--------------------------
+    if (fe){
+      lotek <- data.frame(readRDS('~/work/RData/FurukawaS/RegularLog_YT20070605_D2070.RDS'))
+      names(lotek) <- c('DateTime', 'depth','temperature','light')
+      lotek$DateTime <- as.POSIXct(lotek$DateTime, format=HMMoce::findDateFormat(lotek$DateTime), tz='UTC')
+      lotek <- lotek[which(lotek$DateTime >= dates[1] & lotek$DateTime <= dates[2]),]
 
-    if (tagtype == 'PSAT' & manufacturer == 'Lotek'){
-      if (is.null(fName)) stop('fName must be specified if manufacturer is Lotek')
+      # summarize with melt
+      lotek.new <- reshape2::melt(lotek, id.vars=c('DateTime'), measure.vars = c('temperature','depth','light'))
+      lotek.new$VariableName <- lotek.new$variable
 
-      fList <- list.files(dir)
-      fidx <- grep(fName, fList)
-      if (length(fidx) == 0){
-        break
-      } else if (length(fidx) > 1){
-        stop(paste(length(fidx), 'files match', fName, 'in the current directory. Ensure there are no duplicated extensions and try again.'))
-      } else if (length(fidx) == 1){
-        fe <- TRUE
+      # merge with obs types and do some formatting
+      lotek.new <- merge(x = lotek.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+      lotek.new <- lotek.new[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
+      names(lotek.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+      lotek.new <- lotek.new[order(lotek.new$DateTime, lotek.new$VariableID),]
+      #lotek.new <- lotek.new[which(!is.na(lotek.new$VariableValue)),]
+      lotek.new$DateTime <- as.POSIXct(lotek.new$DateTime, tz='UTC')
+      lotek.new$DateTime <- format(lotek.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+
+      if (exists('returnData')){
+        returnData <- rbind(returnData, lotek.new)
+      } else {
+        returnData <- lotek.new
       }
+    } # end fe
+  } # end if tagtype
+  rm(fe)
 
-      if (fe){
-        lotek <- data.frame(readRDS('~/work/RData/FurukawaS/RegularLog_YT20070605_D2070.RDS'))
-        names(lotek) <- c('DateTime', 'depth','temperature','light')
-        lotek$DateTime <- as.POSIXct(lotek$DateTime, format=HMMoce::findDateFormat(lotek$DateTime), tz='UTC')
+  #--------------------------
+  ## LOTEK PSAT - raw position data
+  #--------------------------
 
-        # summarize with melt
-        lotek.new <- reshape2::melt(lotek, id.vars=c('DateTime'), measure.vars = c('temperature','depth','light'))
-        lotek.new$VariableName <- lotek.new$variable
+  if (tagtype == 'PSAT' & manufacturer == 'Lotek'){
+    print('Reading Lotek PSAT for position data...')
 
-        # merge with obs types and do some formatting
-        lotek.new <- merge(x = lotek.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
-        lotek.new <- lotek.new[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
-        names(lotek.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
-        lotek.new <- lotek.new[order(lotek.new$DateTime, lotek.new$VariableID),]
-        #lotek.new <- lotek.new[which(!is.na(lotek.new$VariableValue)),]
-        lotek.new$DateTime <- as.POSIXct(lotek.new$DateTime, tz='UTC')
-        lotek.new$DateTime <- format(lotek.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+    if (is.null(fName)) stop('fName must be specified if manufacturer is Lotek')
 
-        if (exists('returnData')){
-          returnData <- rbind(returnData, lotek.new)
-        } else {
-          returnData <- lotek.new
-        }
-      } # end fe
-    } # end if tagtype
-    rm(fe)
+    fList <- list.files(dir)
+    fidx <- grep(fName, fList)
+    if (length(fidx) == 0){
+      break
+    } else if (length(fidx) > 1){
+      stop(paste(length(fidx), 'files match', fName, 'in the current directory. Ensure there are no duplicated extensions and try again.'))
+    } else if (length(fidx) == 1){
+      fe <- TRUE
+    }
 
-    #--------------------------
-    ## LOTEK PSAT - raw position data
-    #--------------------------
+    if (fe){
+      lotek <- data.frame(readRDS('~/work/RData/FurukawaS/DayLog_YT20070605_D2070.RDS'))
+      names(lotek) <- c('DateTime', 'longitude','latitude')
+      lotek$DateTime <- as.POSIXct(lotek$DateTime, format=HMMoce::findDateFormat(lotek$DateTime), tz='UTC')
+      lotek <- lotek[which(lotek$DateTime > dates[1] & lotek$DateTime < dates[2]),]
 
-    if (tagtype == 'PSAT' & manufacturer == 'Lotek'){
-      if (is.null(fName)) stop('fName must be specified if manufacturer is Lotek')
+      # summarize with melt
+      lotek.new <- reshape2::melt(lotek, id.vars=c('DateTime'), measure.vars = c('longitude','latitude'))
+      lotek.new$VariableName <- lotek.new$variable
 
-      fList <- list.files(dir)
-      fidx <- grep(fName, fList)
-      if (length(fidx) == 0){
-        break
-      } else if (length(fidx) > 1){
-        stop(paste(length(fidx), 'files match', fName, 'in the current directory. Ensure there are no duplicated extensions and try again.'))
-      } else if (length(fidx) == 1){
-        fe <- TRUE
+      # merge with obs types and do some formatting
+      lotek.new <- merge(x = lotek.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+      lotek.new <- lotek.new[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
+      names(lotek.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+      lotek.new <- lotek.new[order(lotek.new$DateTime, lotek.new$VariableID),]
+      #lotek.new <- lotek.new[which(!is.na(lotek.new$VariableValue)),]
+      lotek.new$DateTime <- as.POSIXct(lotek.new$DateTime, tz='UTC')
+      lotek.new$DateTime <- format(lotek.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+
+      if (exists('returnData')){
+        returnData <- rbind(returnData, lotek.new)
+      } else {
+        returnData <- lotek.new
       }
+    } # end fe
+  } # end if tagtype
+  rm(fe)
 
-      if (fe){
-        lotek <- data.frame(readRDS('~/work/RData/FurukawaS/DayLog_YT20070605_D2070.RDS'))
-        names(lotek) <- c('DateTime', 'longitude','latitude')
-        lotek$DateTime <- as.POSIXct(lotek$DateTime, format=HMMoce::findDateFormat(lotek$DateTime), tz='UTC')
 
-        # summarize with melt
-        lotek.new <- reshape2::melt(lotek, id.vars=c('DateTime'), measure.vars = c('longitude','latitude'))
-        lotek.new$VariableName <- lotek.new$variable
-
-        # merge with obs types and do some formatting
-        lotek.new <- merge(x = lotek.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
-        lotek.new <- lotek.new[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
-        names(lotek.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
-        lotek.new <- lotek.new[order(lotek.new$DateTime, lotek.new$VariableID),]
-        #lotek.new <- lotek.new[which(!is.na(lotek.new$VariableValue)),]
-        lotek.new$DateTime <- as.POSIXct(lotek.new$DateTime, tz='UTC')
-        lotek.new$DateTime <- format(lotek.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
-
-        if (exists('returnData')){
-          returnData <- rbind(returnData, lotek.new)
-        } else {
-          returnData <- lotek.new
-        }
-      } # end fe
-    } # end if tagtype
-    rm(fe)
 
     #--------------------------
     ## WC PDT - depth temp profile data
     #--------------------------
 
     if (tagtype == 'PSAT' & manufacturer == 'Wildlife'){
+      print('Reading Wildlife Computers PSAT...')
 
-      fList <- list.files(dir)
+      fList <- list.files(dir, full.names = T)
       fidx <- grep('-PDTs.csv', fList)
       if (length(fidx) == 0){
         break
@@ -242,7 +261,9 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, fName = NULL){
       }
 
       if (fe){
-        pdt <- HMMoce::read.wc(filename = fList[fidx], type = 'pdt', tag = tag, pop = pop)$data
+        print('Getting PDT data...')
+
+        pdt <- HMMoce::read.wc(filename = fList[fidx], type = 'pdt', tag = dates[1], pop = dates[2])$data
 
         # organize pdt.new for flatfile format
         pdt.new <- pdt
@@ -290,9 +311,12 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, fName = NULL){
       }
 
       if (fe){
+        print('Getting Archival data...')
+
         # if series exists we load it
         arch <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
         arch$dt <- as.POSIXct(arch$Time, format=HMMoce::findDateFormat(arch$Time), tz='UTC')
+        arch <- arch[which(arch$dt >= dates[1] & arch$dt <= dates[2]),]
 
         # organize arch.new for flatfile format
         arch.new <- subset(arch, select=-c(One.Minute.Light.Level, Smoothed.Light.Level))
@@ -340,9 +364,12 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, fName = NULL){
       }
 
       if (fe & !exists(arch.new)){
+        print('Getting Series data...')
+
         # if series exists we load it
         series <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
         series$dt <- lubridate::parse_date_time(paste(series$Day, series$Time), orders='dby HMS', tz='UTC')
+        series <- series[which(series$dt >= dates[1] & series$dt <= dates[2]),]
 
         # organize series.new for flatfile format
         series.new <- subset(series, select=-c(DepthSensor))
@@ -391,9 +418,12 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, fName = NULL){
       }
 
       if (fe){
+        print('Getting min/max depth data...')
+
         # if file exists we load it
         mmd <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
-        mmd$dt <- parse_date_time(mmd$Date, orders='HMS dbY', tz='UTC')
+        mmd$dt <- lubridate::parse_date_time(mmd$Date, orders='HMS dbY', tz='UTC')
+        mmd <- mmd[which(mmd$dt >= dates[1] & mmd$dt <= dates[2]),]
 
         # organize mmd.new for flatfile format
         #mmd.new <- subset(mmd, select=-c(DepthSensor))
@@ -447,10 +477,13 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, fName = NULL){
       }
 
       if (fe){
+        print('Getting SST data...')
+
         # if file exists we load it
         sst <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
+        sst$dt <- lubridate::parse_date_time(sst$Date, orders='HMS dbY', tz='UTC')
+        sst <- sst[which(sst$dt >= dates[1] & sst$dt <= dates[2]),]
 
-        sst$dt <- parse_date_time(sst$Date, orders='HMS dbY', tz='UTC')
         # organize mmd.new for flatfile format
         #mmd.new <- subset(mmd, select=-c(DepthSensor))
         sst.new <- sst
@@ -499,10 +532,13 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, fName = NULL){
       }
 
       if (fe){
+        print('Getting MixedLayer data...')
+
         # if file exists we load it
         ml <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
+        ml$Date <- lubridate::parse_date_time(ml$Date, orders='HMS dbY', tz='UTC')
+        ml <- ml[which(ml$Date >= dates[1] & ml$Date <= dates[2]),]
 
-        ml$Date <- parse_date_time(ml$Date, orders='HMS dbY', tz='UTC')
         # organize mmd.new for flatfile format
         #mmd.new <- subset(mmd, select=-c(DepthSensor))
         ml.new <- ml
@@ -544,11 +580,14 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, fName = NULL){
     tatBins.i <- tatBins[which(tatBins$SpeciesCode %in% meta$speciescode[i] & tatBins$PTT %in% meta$ptt[i]),]
 
     if (fe){
+      print('Getting Histos data...')
+
       # if file exists we load it
       histo <- read.table(paste('~/work/Data/meso/', tolower(meta$speciescode[i]),
                                 '/', meta$ptt[i], '/', meta$ptt[i], '-Histos.csv', sep=''), sep=',', header=T, blank.lines.skip = F)
       histo <- histo[which(!is.na(histo$Sum)),]
       histo$dt <- parse_date_time(histo$Date, orders='HMS dbY', tz='UTC')
+      histo <- histo[which(histo$dt >= dates[1] & histo$dt <= dates[2]),]
       histo$day <- as.Date(histo$dt, tz='UTC')
       histo <- histo[which(histo$day >= as.Date(min(track$dt)) & histo$day <= as.Date(max(track$dt))),]
       names(histo) <- tolower(names(histo))
@@ -592,9 +631,12 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, fName = NULL){
     fe <- file.exists(paste(dir, '-Histos.csv', sep=''))
 
     if (fe){
-      setwd(myDir)
-      ncFile <- list.files()[grep('.nc', list.files())]
-      csvFile <- list.files()[grep('GPE3.csv',list.files())]
+      print('Getting GPE3 data...')
+
+      #setwd(myDir)
+      ncFile <- list.files(dir, full.names = T)[grep('.nc', list.files(dir, full.names = T))]
+      csvFile <- list.files(dir, full.names = T)[grep('GPE3.csv',list.files(dir, full.names = T))]
+      if (length(ncFile) > 1 | length(csvFile) > 1) stop('Multiple matches to .nc or GPE3.csv in the specified directory.')
 
       out <- getCtr_gpe3(ncFile, csvFile, threshold=50, makePlot=F)
       df <- lapply(out, FUN=function(x) cbind(x$loc, x$xDist, x$yDist))
@@ -620,6 +662,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, fName = NULL){
       gpe <- gpe[order(gpe$DateTime, gpe$VariableID),]
       gpe <- gpe[which(!is.na(gpe$VariableValue)),]
       gpe$DateTime <- as.POSIXct(gpe$DateTime, tz='UTC')
+      gpe <- gpe[which(gpe$DateTime >= dates[1] & gpe$DateTime <= dates[2]),]
       gpe$DateTime <- format(gpe$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
 
       if (exists('returnData')){
@@ -632,13 +675,8 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, fName = NULL){
     rm(fe)
 
 
-
-    ## MIX LAYER?
-
-
     # use lightloc function (skip for now?)
 
 
-  }
-
 } # end function
+
