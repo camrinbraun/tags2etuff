@@ -1,3 +1,11 @@
+# WORKING:
+# deal with varying sources of SST and how to represent in eTUFF
+# histos section is a mess
+# lightloc is not even started
+# check GPE3 section for "finished" state
+# add define waypoint source in metadata for GPE3 or position info from MTI, Lotek or SPOT tags
+
+
 #'
 #' @param dir is directory the target data is stored in
 #' @param manufacturer is character indicating tag manufacturer. Choices are 'Wildlife','Microwave','Lotek'.
@@ -48,10 +56,11 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL){
 
   if (tagtype == 'SPOT' & manufacturer == 'Wildlife'){
     # use argos-locations function - the source of this would be reflected in the metadata specific to the SPOT tag
-    fList <- list.files(dir)
+    fList <- list.files(dir, full.names = T)
     fidx <- grep('-Locations.csv', fList)
     if (length(fidx) == 0){
-      break
+      print(paste('No Wildlife SPOT data to gather.', sep=''))
+      fe <- FALSE
     } else if (length(fidx) > 1){
       stop(paste(length(fidx), 'files match -Locations.csv in the current directory. Ensure there are no duplicated extensions and try again.'))
     } else if (length(fidx) == 1){
@@ -103,10 +112,11 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL){
 
     if (is.null(fName)) stop('fName must be specified if manufacturer is Microwave.')
 
-    fList <- list.files(dir)
+    fList <- list.files(dir, full.names = T)
     fidx <- grep(fName, fList)
     if (length(fidx) == 0){
-      break
+      print(paste('No Microwave data to gather using', fName, '.', sep=''))
+      fe <- FALSE
     } else if (length(fidx) > 1){
       stop(paste(length(fidx), 'files match', fName, 'in the current directory. Ensure there are no duplicated extensions and try again.'))
     } else if (length(fidx) == 1){
@@ -156,10 +166,11 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL){
 
     if (is.null(fName)) stop('fName must be specified if manufacturer is Lotek')
 
-    fList <- list.files(dir)
+    fList <- list.files(dir, full.names = T)
     fidx <- grep(fName, fList)
     if (length(fidx) == 0){
-      break
+      print(paste('No Lotek data to gather using', fName, '.', sep=''))
+      fe <- FALSE
     } else if (length(fidx) > 1){
       stop(paste(length(fidx), 'files match', fName, 'in the current directory. Ensure there are no duplicated extensions and try again.'))
     } else if (length(fidx) == 1){
@@ -203,10 +214,11 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL){
 
     if (is.null(fName)) stop('fName must be specified if manufacturer is Lotek')
 
-    fList <- list.files(dir)
+    fList <- list.files(dir, full.names = T)
     fidx <- grep(fName, fList)
     if (length(fidx) == 0){
-      break
+      print(paste('No Lotek data to gather using', fName, '.', sep=''))
+      fe <- FALSE
     } else if (length(fidx) > 1){
       stop(paste(length(fidx), 'files match', fName, 'in the current directory. Ensure there are no duplicated extensions and try again.'))
     } else if (length(fidx) == 1){
@@ -242,55 +254,58 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL){
   rm(fe)
 
 
+  #--------------------------
+  ## WILDLIFE COMPUTERS PSAT
+  #--------------------------
+
+  if (tagtype == 'PSAT' & manufacturer == 'Wildlife'){
+    print('Reading Wildlife Computers PSAT...')
 
     #--------------------------
     ## WC PDT - depth temp profile data
     #--------------------------
 
-    if (tagtype == 'PSAT' & manufacturer == 'Wildlife'){
-      print('Reading Wildlife Computers PSAT...')
+    fList <- list.files(dir, full.names = T)
+    fidx <- grep('-PDTs.csv', fList)
+    if (length(fidx) == 0){
+      print('No PDT data to gather.')
+      fe <- FALSE
+    } else if (length(fidx) > 1){
+      stop(paste(length(fidx), 'files match -PDTs.csv in the current directory. Ensure there are no duplicated extensions and try again.'))
+    } else if (length(fidx) == 1){
+      fe <- TRUE
+    }
 
-      fList <- list.files(dir, full.names = T)
-      fidx <- grep('-PDTs.csv', fList)
-      if (length(fidx) == 0){
-        break
-      } else if (length(fidx) > 1){
-        stop(paste(length(fidx), 'files match -PDTs.csv in the current directory. Ensure there are no duplicated extensions and try again.'))
-      } else if (length(fidx) == 1){
-        fe <- TRUE
+    if (fe){
+      print('Getting PDT data...')
+
+      pdt <- HMMoce::read.wc(filename = fList[fidx], type = 'pdt', tag = dates[1], pop = dates[2])$data
+
+      # organize pdt.new for flatfile format
+      pdt.new <- pdt
+      nms <- names(pdt.new)
+      nms[grep('MinTemp', nms)] <- 'TempMin'
+      nms[grep('MaxTemp', nms)] <- 'TempMax'
+      names(pdt.new) <- nms
+      pdt.new <- reshape2::melt(pdt.new, id.vars=c('Date','BinNum'), measure.vars = c('Depth','TempMin','TempMax'))
+
+      binchar <- pdt.new$BinNum
+      for (i in 1:length(binchar)) if (nchar(binchar[i]) < 2) binchar[i] <- paste('0', binchar[i], sep='')
+      pdt.new$VariableName <- paste('Pdt', pdt.new$variable, binchar, sep='')
+
+      pdt.new <- merge(x = pdt.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+      pdt.new <- pdt.new[,c('Date','VariableID','value','VariableName','VariableUnits')]
+      names(pdt.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+      pdt.new <- pdt.new[order(pdt.new$DateTime, pdt.new$VariableID),]
+      pdt.new$DateTime <- as.POSIXct(pdt.new$DateTime, tz='UTC')
+      pdt.new$DateTime <- format(pdt.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+
+      if (exists('returnData')){
+        returnData <- rbind(returnData, pdt.new)
+      } else {
+        returnData <- pdt.new
       }
-
-      if (fe){
-        print('Getting PDT data...')
-
-        pdt <- HMMoce::read.wc(filename = fList[fidx], type = 'pdt', tag = dates[1], pop = dates[2])$data
-
-        # organize pdt.new for flatfile format
-        pdt.new <- pdt
-        nms <- names(pdt.new)
-        nms[grep('MinTemp', nms)] <- 'TempMin'
-        nms[grep('MaxTemp', nms)] <- 'TempMax'
-        names(pdt.new) <- nms
-        pdt.new <- melt(pdt.new, id.vars=c('Date','BinNum'), measure.vars = c('Depth','TempMin','TempMax'))
-
-        binchar <- pdt.new$BinNum
-        for (i in 1:length(binchar)) if (nchar(binchar[i]) < 2) binchar[i] <- paste('0', binchar[i], sep='')
-        pdt.new$VariableName <- paste('Pdt', pdt.new$variable, binchar, sep='')
-
-        pdt.new <- merge(x = pdt.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
-        pdt.new <- pdt.new[,c('Date','VariableID','value','VariableName','VariableUnits')]
-        names(pdt.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
-        pdt.new <- pdt.new[order(pdt.new$DateTime, pdt.new$VariableID),]
-        pdt.new$DateTime <- as.POSIXct(pdt.new$DateTime, tz='UTC')
-        pdt.new$DateTime <- format(pdt.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
-
-        if (exists('returnData')){
-          returnData <- rbind(returnData, pdt.new)
-        } else {
-          returnData <- pdt.new
-        }
-      } # end fe
-    } # end if tagtype
+    } # end fe
     rm(fe)
 
 
@@ -298,162 +313,156 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL){
     ## WC ARCHIVAL - depth, temperature, light
     #--------------------------
 
-    if (tagtype == 'PSAT' & manufacturer == 'Wildlife'){
+    fList <- list.files(dir, full.names = T)
+    fidx <- grep('-Archive.csv', fList)
+    if (length(fidx) == 0){
+      print('No Archive data to read.')
+      fe <- FALSE
+    } else if (length(fidx) > 1){
+      stop(paste(length(fidx), 'files match -Archive.csv in the current directory. Ensure there are no duplicated extensions and try again.'))
+    } else if (length(fidx) == 1){
+      fe <- TRUE
+    }
 
-      fList <- list.files(dir)
-      fidx <- grep('-Archive.csv', fList)
-      if (length(fidx) == 0){
-        break
-      } else if (length(fidx) > 1){
-        stop(paste(length(fidx), 'files match -Archive.csv in the current directory. Ensure there are no duplicated extensions and try again.'))
-      } else if (length(fidx) == 1){
-        fe <- TRUE
+    if (fe){
+      print('Getting Archival data...')
+
+      # if series exists we load it
+      arch <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
+      arch$dt <- as.POSIXct(arch$Time, format=HMMoce::findDateFormat(arch$Time), tz='UTC')
+      arch <- arch[which(arch$dt >= dates[1] & arch$dt <= dates[2]),]
+
+      # organize arch.new for flatfile format
+      arch.new <- subset(arch, select=-c(One.Minute.Light.Level, Smoothed.Light.Level))
+      nms <- names(arch.new)
+      nms[grep('Depth', nms)] <- 'depth'
+      nms[grep('Temperature', nms)] <- 'temperature'
+      nms[grep('Light.Level', nms)] <- 'light'
+      names(arch.new) <- nms
+      # summarize with melt
+      arch.new <- reshape2::melt(arch.new, id.vars=c('dt'), measure.vars = c('depth','temperature','light'))
+      arch.new$VariableName <- arch.new$variable
+
+      # merge with obs types and do some formatting
+      arch.new <- merge(x = arch.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+      arch.new <- arch.new[,c('dt','VariableID','value','VariableName','VariableUnits')]
+      names(arch.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+      arch.new <- arch.new[order(arch.new$DateTime, arch.new$VariableID),]
+      arch.new <- arch.new[which(!is.na(arch.new$VariableValue)),]
+      arch.new$DateTime <- as.POSIXct(arch.new$DateTime, tz='UTC')
+      arch.new$DateTime <- format(arch.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+
+      if (exists('returnData')){
+        returnData <- rbind(returnData, arch.new)
+      } else {
+        returnData <- arch.new
       }
-
-      if (fe){
-        print('Getting Archival data...')
-
-        # if series exists we load it
-        arch <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
-        arch$dt <- as.POSIXct(arch$Time, format=HMMoce::findDateFormat(arch$Time), tz='UTC')
-        arch <- arch[which(arch$dt >= dates[1] & arch$dt <= dates[2]),]
-
-        # organize arch.new for flatfile format
-        arch.new <- subset(arch, select=-c(One.Minute.Light.Level, Smoothed.Light.Level))
-        nms <- names(arch.new)
-        nms[grep('Depth', nms)] <- 'depth'
-        nms[grep('Temperature', nms)] <- 'temperature'
-        nms[grep('Light.Level', nms)] <- 'light'
-        names(arch.new) <- nms
-        # summarize with melt
-        arch.new <- reshape2::melt(arch.new, id.vars=c('dt'), measure.vars = c('depth','temperature','light'))
-        arch.new$VariableName <- arch.new$variable
-
-        # merge with obs types and do some formatting
-        arch.new <- merge(x = arch.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
-        arch.new <- arch.new[,c('dt','VariableID','value','VariableName','VariableUnits')]
-        names(arch.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
-        arch.new <- arch.new[order(arch.new$DateTime, arch.new$VariableID),]
-        arch.new <- arch.new[which(!is.na(arch.new$VariableValue)),]
-        arch.new$DateTime <- as.POSIXct(arch.new$DateTime, tz='UTC')
-        arch.new$DateTime <- format(arch.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
-
-        if (exists('returnData')){
-          returnData <- rbind(returnData, arch.new)
-        } else {
-          returnData <- arch.new
-        }
-      } # end fe
-    } # end if tagtype
+    } # end fe
     rm(fe)
 
     #--------------------------
     ## WC SERIES - depth and sometimes temperature
     #--------------------------
 
-    if (tagtype == 'PSAT' & manufacturer == 'Wildlife'){
+    fList <- list.files(dir, full.names = T)
+    fidx <- grep('-Series.csv', fList)
+    if (length(fidx) == 0){
+      print(paste('No Wildlife Series data to gather.', sep=''))
+      fe <- FALSE
+    } else if (length(fidx) > 1){
+      stop(paste(length(fidx), 'files match -Series.csv in the current directory. Ensure there are no duplicated extensions and try again.'))
+    } else if (length(fidx) == 1){
+      fe <- TRUE
+    }
 
-      fList <- list.files(dir)
-      fidx <- grep('-Series.csv', fList)
-      if (length(fidx) == 0){
-        break
-      } else if (length(fidx) > 1){
-        stop(paste(length(fidx), 'files match -Series.csv in the current directory. Ensure there are no duplicated extensions and try again.'))
-      } else if (length(fidx) == 1){
-        fe <- TRUE
+    if (fe & !exists('arch.new')){
+      print('Getting Series data...')
+
+      # if series exists we load it
+      series <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
+      series$dt <- lubridate::parse_date_time(paste(series$Day, series$Time), orders='dby HMS', tz='UTC')
+      series <- series[which(series$dt >= dates[1] & series$dt <= dates[2]),]
+
+      # organize series.new for flatfile format
+      series.new <- subset(series, select=-c(DepthSensor))
+      nms <- names(series.new)
+      nms[grep('Depth', nms)] <- 'depthMean'
+      nms[grep('DRange', nms)] <- 'depthStDev'
+      nms[grep('Temperature', nms)] <- 'tempMean'
+      nms[grep('TRange', nms)] <- 'tempStDev'
+      names(series.new) <- nms
+      # summarize with melt
+      series.new <- reshape2::melt(series.new, id.vars=c('dt'), measure.vars = c('depthMean','depthStDev','tempMean','tempStDev'))
+      series.new$VariableName <- series.new$variable
+
+      # merge with obs types and do some formatting
+      series.new <- merge(x = series.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+      series.new <- series.new[,c('dt','VariableID','value','VariableName','VariableUnits')]
+      names(series.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+      series.new <- series.new[order(series.new$DateTime, series.new$VariableID),]
+      series.new <- series.new[which(!is.na(series.new$VariableValue)),]
+      series.new$DateTime <- as.POSIXct(series.new$DateTime, tz='UTC')
+      series.new$DateTime <- format(series.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+
+      if (exists('returnData')){
+        returnData <- rbind(returnData, series.new)
+      } else {
+        returnData <- series.new
       }
-
-      if (fe & !exists(arch.new)){
-        print('Getting Series data...')
-
-        # if series exists we load it
-        series <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
-        series$dt <- lubridate::parse_date_time(paste(series$Day, series$Time), orders='dby HMS', tz='UTC')
-        series <- series[which(series$dt >= dates[1] & series$dt <= dates[2]),]
-
-        # organize series.new for flatfile format
-        series.new <- subset(series, select=-c(DepthSensor))
-        nms <- names(series.new)
-        nms[grep('Depth', nms)] <- 'depthMean'
-        nms[grep('DRange', nms)] <- 'depthStDev'
-        nms[grep('Temperature', nms)] <- 'tempMean'
-        nms[grep('TRange', nms)] <- 'tempStDev'
-        names(series.new) <- nms
-        # summarize with melt
-        series.new <- reshape2::melt(series.new, id.vars=c('dt'), measure.vars = c('depthMean','depthStDev','tempMean','tempStDev'))
-        series.new$VariableName <- series.new$variable
-
-        # merge with obs types and do some formatting
-        series.new <- merge(x = series.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
-        series.new <- series.new[,c('dt','VariableID','value','VariableName','VariableUnits')]
-        names(series.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
-        series.new <- series.new[order(series.new$DateTime, series.new$VariableID),]
-        series.new <- series.new[which(!is.na(series.new$VariableValue)),]
-        series.new$DateTime <- as.POSIXct(series.new$DateTime, tz='UTC')
-        series.new$DateTime <- format(series.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
-
-        if (exists('returnData')){
-          returnData <- rbind(returnData, series.new)
-        } else {
-          returnData <- series.new
-        }
-      } # end fe
-    } # end if tagtype
+    } # end fe
     rm(fe)
 
     #--------------------------
     ## WC MIN/MAX
     #--------------------------
 
-    if (tagtype == 'PSAT' & manufacturer == 'Wildlife'){
+    fList <- list.files(dir, full.names = T)
+    fidx <- grep('-MinMaxDepth.csv', fList)
+    if (length(fidx) == 0){
+      print(paste('No Wildlife MinMaxDepth data to gather.', sep=''))
+      fe <- FALSE
+    } else if (length(fidx) > 1){
+      stop(paste(length(fidx), 'files match -MinMaxDepth.csv in the current directory. Ensure there are no duplicated extensions and try again.'))
+    } else if (length(fidx) == 1){
+      fe <- TRUE
+    }
 
-      fList <- list.files(dir)
-      fidx <- grep('-MinMaxDepth.csv', fList)
-      if (length(fidx) == 0){
-        break
-      } else if (length(fidx) > 1){
-        stop(paste(length(fidx), 'files match -MinMaxDepth.csv in the current directory. Ensure there are no duplicated extensions and try again.'))
-      } else if (length(fidx) == 1){
-        fe <- TRUE
+    if (fe){
+      print('Getting min/max depth data...')
+
+      # if file exists we load it
+      mmd <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
+      mmd$dt <- lubridate::parse_date_time(mmd$Date, orders='HMS dbY', tz='UTC')
+      mmd <- mmd[which(mmd$dt >= dates[1] & mmd$dt <= dates[2]),]
+
+      # organize mmd.new for flatfile format
+      #mmd.new <- subset(mmd, select=-c(DepthSensor))
+      mmd.new <- mmd
+      nms <- names(mmd.new)
+      nms[grep('MinDepth', nms)] <- 'depthMin'
+      #nms[grep('MinAccuracy', nms)] <- 'depthMinAcc'
+      nms[grep('MaxDepth', nms)] <- 'depthMax'
+      #nms[grep('TRange', nms)] <- 'depthMaxAcc'
+      names(mmd.new) <- nms
+      # summarize with melt
+      mmd.new <- reshape2::melt(mmd.new, id.vars=c('dt'), measure.vars = c('depthMin','depthMax'))
+      mmd.new$VariableName <- mmd.new$variable
+
+      # merge with obs types and do some formatting
+      mmd.new <- merge(x = mmd.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+      mmd.new <- mmd.new[,c('dt','VariableID','value','VariableName','VariableUnits')]
+      names(mmd.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+      mmd.new <- mmd.new[order(mmd.new$DateTime, mmd.new$VariableID),]
+      #mmd.new <- mmd.new[which(!is.na(mmd.new$VariableValue)),]
+      mmd.new$DateTime <- as.POSIXct(mmd.new$DateTime, tz='UTC')
+      mmd.new$DateTime <- format(mmd.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+
+      if (exists('returnData')){
+        returnData <- rbind(returnData, mmd.new)
+      } else {
+        returnData <- mmd.new
       }
-
-      if (fe){
-        print('Getting min/max depth data...')
-
-        # if file exists we load it
-        mmd <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
-        mmd$dt <- lubridate::parse_date_time(mmd$Date, orders='HMS dbY', tz='UTC')
-        mmd <- mmd[which(mmd$dt >= dates[1] & mmd$dt <= dates[2]),]
-
-        # organize mmd.new for flatfile format
-        #mmd.new <- subset(mmd, select=-c(DepthSensor))
-        mmd.new <- mmd
-        nms <- names(mmd.new)
-        nms[grep('MinDepth', nms)] <- 'depthMin'
-        #nms[grep('MinAccuracy', nms)] <- 'depthMinAcc'
-        nms[grep('MaxDepth', nms)] <- 'depthMax'
-        #nms[grep('TRange', nms)] <- 'depthMaxAcc'
-        names(mmd.new) <- nms
-        # summarize with melt
-        mmd.new <- melt(mmd.new, id.vars=c('dt'), measure.vars = c('depthMin','depthMax'))
-        mmd.new$VariableName <- mmd.new$variable
-
-        # merge with obs types and do some formatting
-        mmd.new <- merge(x = mmd.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
-        mmd.new <- mmd.new[,c('dt','VariableID','value','VariableName','VariableUnits')]
-        names(mmd.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
-        mmd.new <- mmd.new[order(mmd.new$DateTime, mmd.new$VariableID),]
-        #mmd.new <- mmd.new[which(!is.na(mmd.new$VariableValue)),]
-        mmd.new$DateTime <- as.POSIXct(mmd.new$DateTime, tz='UTC')
-        mmd.new$DateTime <- format(mmd.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
-
-        if (exists('returnData')){
-          returnData <- rbind(returnData, mmd.new)
-        } else {
-          returnData <- mmd.new
-        }
-      } # end fe
-    } # end if tagtype
+    } # end fe
     rm(fe)
 
     #------------
@@ -461,120 +470,125 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL){
     ## for WC mP's: if SST source = MixLayer then the value is an SST summary (mean?) integrated over the summary period
     ##              if SST source = TimeSeries then its discrete SST measurement with timestamp however depth may not be full resolution depending on how it was encoded in the source
     ##              if SST source = LightLoc then discrete SST measurements and depth at full resolution
-    ##              if SST source = Status then unknown?? ask WC
+    ##              if SST source = Status then it used a discrete status message temperature. But the timestamp in the SST file will be rounded to the nearest summary period.
 
+    fList <- list.files(dir, full.names = T)
+    fidx <- grep('-SST.csv', fList)
+    if (length(fidx) == 0){
+      print(paste('No Wildlife SST data to gather.', sep=''))
+      fe <- FALSE
+    } else if (length(fidx) > 1){
+      stop(paste(length(fidx), 'files match -SST.csv in the current directory. Ensure there are no duplicated extensions and try again.'))
+    } else if (length(fidx) == 1){
+      fe <- TRUE
+    }
 
-    if (tagtype == 'PSAT' & manufacturer == 'Wildlife'){
+    if (fe){
+      print('Getting SST data...')
 
-      fList <- list.files(dir)
-      fidx <- grep('-SST.csv', fList)
-      if (length(fidx) == 0){
-        break
-      } else if (length(fidx) > 1){
-        stop(paste(length(fidx), 'files match -SST.csv in the current directory. Ensure there are no duplicated extensions and try again.'))
-      } else if (length(fidx) == 1){
-        fe <- TRUE
+      # if file exists we load it
+      sst <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
+      sst$dt <- lubridate::parse_date_time(sst$Date, orders='HMS dbY', tz='UTC')
+      sst <- sst[which(sst$dt >= dates[1] & sst$dt <= dates[2]),]
+
+      # organize mmd.new for flatfile format
+      #mmd.new <- subset(mmd, select=-c(DepthSensor))
+      sst.new <- sst
+      nms <- names(sst.new)
+      nms[grep('MinDepth', nms)] <- 'depthMin'
+      #nms[grep('MinAccuracy', nms)] <- 'depthMinAcc'
+      nms[grep('MaxDepth', nms)] <- 'depthMax'
+      #nms[grep('TRange', nms)] <- 'depthMaxAcc'
+      names(sst.new) <- nms
+      # summarize with melt
+      sst.new <- reshape2::melt(sst.new, id.vars=c('dt'), measure.vars = c('depthMin','depthMax'))
+      sst.new$VariableName <- sst.new$variable
+
+      # merge with obs types and do some formatting
+      sst.new <- merge(x = sst.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+      sst.new <- sst.new[,c('dt','VariableID','value','VariableName','VariableUnits')]
+      names(sst.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+      sst.new <- sst.new[order(sst.new$DateTime, sst.new$VariableID),]
+      #sst.new <- sst.new[which(!is.na(sst.new$VariableValue)),]
+      sst.new$DateTime <- as.POSIXct(sst.new$DateTime, tz='UTC')
+      sst.new$DateTime <- format(sst.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+
+      if (exists('returnData')){
+        returnData <- rbind(returnData, sst.new)
+      } else {
+        returnData <- sst.new
       }
+    } # end fe
 
-      if (fe){
-        print('Getting SST data...')
-
-        # if file exists we load it
-        sst <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
-        sst$dt <- lubridate::parse_date_time(sst$Date, orders='HMS dbY', tz='UTC')
-        sst <- sst[which(sst$dt >= dates[1] & sst$dt <= dates[2]),]
-
-        # organize mmd.new for flatfile format
-        #mmd.new <- subset(mmd, select=-c(DepthSensor))
-        sst.new <- sst
-        nms <- names(sst.new)
-        nms[grep('MinDepth', nms)] <- 'depthMin'
-        #nms[grep('MinAccuracy', nms)] <- 'depthMinAcc'
-        nms[grep('MaxDepth', nms)] <- 'depthMax'
-        #nms[grep('TRange', nms)] <- 'depthMaxAcc'
-        names(sst.new) <- nms
-        # summarize with melt
-        sst.new <- melt(sst.new, id.vars=c('dt'), measure.vars = c('depthMin','depthMax'))
-        sst.new$VariableName <- sst.new$variable
-
-        # merge with obs types and do some formatting
-        sst.new <- merge(x = sst.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
-        sst.new <- sst.new[,c('dt','VariableID','value','VariableName','VariableUnits')]
-        names(sst.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
-        sst.new <- sst.new[order(sst.new$DateTime, sst.new$VariableID),]
-        #sst.new <- sst.new[which(!is.na(sst.new$VariableValue)),]
-        sst.new$DateTime <- as.POSIXct(sst.new$DateTime, tz='UTC')
-        sst.new$DateTime <- format(sst.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
-
-        if (exists('returnData')){
-          returnData <- rbind(returnData, sst.new)
-        } else {
-          returnData <- sst.new
-        }
-      } # end fe
-    } # end if tagtype
     rm(fe)
 
     #------------
     ## MIXED LAYER
 
+    fList <- list.files(dir, full.names = T)
+    fidx <- grep('-MixedLayer.csv', fList)
+    if (length(fidx) == 0){
+      print(paste('No Wildlife MixedLayer data to gather.', sep=''))
+      fe <- FALSE
+    } else if (length(fidx) > 1){
+      stop(paste(length(fidx), 'files match -MixedLayer.csv in the current directory. Ensure there are no duplicated extensions and try again.'))
+    } else if (length(fidx) == 1){
+      fe <- TRUE
+    }
 
-    if (tagtype == 'PSAT' & manufacturer == 'Wildlife'){
+    if (fe){
+      print('Getting MixedLayer data...')
 
-      fList <- list.files(dir)
-      fidx <- grep('-MixedLayer.csv', fList)
-      if (length(fidx) == 0){
-        break
-      } else if (length(fidx) > 1){
-        stop(paste(length(fidx), 'files match -MixedLayer.csv in the current directory. Ensure there are no duplicated extensions and try again.'))
-      } else if (length(fidx) == 1){
-        fe <- TRUE
+      # if file exists we load it
+      ml <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
+      ml$Date <- lubridate::parse_date_time(ml$Date, orders='HMS dbY', tz='UTC')
+      ml <- ml[which(ml$Date >= dates[1] & ml$Date <= dates[2]),]
+
+      # organize mmd.new for flatfile format
+      #mmd.new <- subset(mmd, select=-c(DepthSensor))
+      ml.new <- ml
+      nms <- names(ml.new)
+      nms[grep('SSTAve', nms)] <- 'sstMean'
+      nms[grep('SSTmin', nms)] <- 'sstMin'
+      nms[grep('SSTmax', nms)] <- 'sstMax'
+      nms[grep('TempMin', nms)] <- 'tempMin'
+      nms[grep('DepthMin', nms)] <- 'depthMin'
+      nms[grep('DepthMax', nms)] <- 'depthMax'
+      names(ml.new) <- nms
+      # summarize with melt
+      ml.new <- reshape2::melt(ml.new, id.vars=c('Date'), measure.vars = c('depthMin','depthMax','sstMean','sstMin','sstMax','tempMin'))
+      ml.new$VariableName <- ml.new$variable
+
+      # merge with obs types and do some formatting
+      ml.new <- merge(x = ml.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+      ml.new <- ml.new[,c('Date','VariableID','value','VariableName','VariableUnits')]
+      names(ml.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+      ml.new <- ml.new[order(ml.new$DateTime, ml.new$VariableID),]
+      ml.new <- ml.new[which(!is.na(ml.new$VariableValue)),]
+      ml.new$DateTime <- as.POSIXct(ml.new$DateTime, tz='UTC')
+      ml.new$DateTime <- format(ml.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+
+      if (exists('returnData')){
+        returnData <- rbind(returnData, ml.new)
+      } else {
+        returnData <- ml.new
       }
-
-      if (fe){
-        print('Getting MixedLayer data...')
-
-        # if file exists we load it
-        ml <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
-        ml$Date <- lubridate::parse_date_time(ml$Date, orders='HMS dbY', tz='UTC')
-        ml <- ml[which(ml$Date >= dates[1] & ml$Date <= dates[2]),]
-
-        # organize mmd.new for flatfile format
-        #mmd.new <- subset(mmd, select=-c(DepthSensor))
-        ml.new <- ml
-        nms <- names(ml.new)
-        nms[grep('SSTAve', nms)] <- 'sstMean'
-        nms[grep('SSTmin', nms)] <- 'sstMin'
-        nms[grep('SSTmax', nms)] <- 'sstMax'
-        nms[grep('TempMin', nms)] <- 'tempMin'
-        nms[grep('DepthMin', nms)] <- 'depthMin'
-        nms[grep('DepthMax', nms)] <- 'depthMax'
-        names(ml.new) <- nms
-        # summarize with melt
-        ml.new <- melt(ml.new, id.vars=c('Date'), measure.vars = c('depthMin','depthMax','sstMean','sstMin','sstMax','tempMin'))
-        ml.new$VariableName <- ml.new$variable
-
-        # merge with obs types and do some formatting
-        ml.new <- merge(x = ml.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
-        ml.new <- ml.new[,c('Date','VariableID','value','VariableName','VariableUnits')]
-        names(ml.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
-        ml.new <- ml.new[order(ml.new$DateTime, ml.new$VariableID),]
-        ml.new <- ml.new[which(!is.na(ml.new$VariableValue)),]
-        ml.new$DateTime <- as.POSIXct(ml.new$DateTime, tz='UTC')
-        ml.new$DateTime <- format(ml.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
-
-        if (exists('returnData')){
-          returnData <- rbind(returnData, ml.new)
-        } else {
-          returnData <- ml.new
-        }
-      } # end fe
-    } # end if tagtype
+    } # end fe
     rm(fe)
 
     #------------
     ## HISTOS
-    fe <- file.exists(paste(dir, '-Histos.csv', sep=''))
+
+    fList <- list.files(dir, full.names = T)
+    fidx <- grep('-Histos.csv', fList)
+    if (length(fidx) == 0){
+      print(paste('No Wildlife Histos data to gather.', sep=''))
+      fe <- FALSE
+    } else if (length(fidx) > 1){
+      stop(paste(length(fidx), 'files match -Histos.csv in the current directory. Ensure there are no duplicated extensions and try again.'))
+    } else if (length(fidx) == 1){
+      fe <- TRUE
+    }
 
     tadBins.i <- tadBins[which(tadBins$SpeciesCode %in% meta$speciescode[i] & tadBins$PTT %in% meta$ptt[i]),]
     tatBins.i <- tatBins[which(tatBins$SpeciesCode %in% meta$speciescode[i] & tatBins$PTT %in% meta$ptt[i]),]
@@ -619,16 +633,26 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL){
       # get rid of wonky depth sensor
       if (meta$ptt[i] == 100976) histos$meanval[which(histos$binmeta > 1500)] <- NA
 
-    } else{
-      histos <- NULL
-      meta$histos[i] <- F
-
+      if (exists('returnData')){
+        returnData <- rbind(returnData, histos)
+      } else {
+        returnData <- histos
+      }
     }
 
     #------------
     ## GPE3 - the source of these positions, in this case GPE3, would be reflected in the metadata specific to the PSAT tag as "modeled" and "GPE3"
 
-    fe <- file.exists(paste(dir, '-Histos.csv', sep=''))
+    fList <- list.files(dir, full.names = T)
+    fidx <- grep('-GPE3.csv', fList)
+    if (length(fidx) == 0){
+      print(paste('No Wildlife GPE3 data to gather.', sep=''))
+      fe <- FALSE
+    } else if (length(fidx) > 1){
+      stop(paste(length(fidx), 'files match -GPE3.csv in the current directory. Ensure there are no duplicated extensions and try again.'))
+    } else if (length(fidx) == 1){
+      fe <- TRUE
+    }
 
     if (fe){
       print('Getting GPE3 data...')
@@ -652,7 +676,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL){
       nms[grep('yDist', nms)] <- 'latitudeError'
       names(gpe) <- nms
       # summarize with melt
-      gpe <- melt(gpe, id.vars=c('date'), measure.vars = c('longitude','latitude','longitudeError','latitudeError'))
+      gpe <- reshape2::melt(gpe, id.vars=c('date'), measure.vars = c('longitude','latitude','longitudeError','latitudeError'))
       gpe$VariableName <- gpe$variable
 
       # merge with obs types and do some formatting
@@ -662,7 +686,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL){
       gpe <- gpe[order(gpe$DateTime, gpe$VariableID),]
       gpe <- gpe[which(!is.na(gpe$VariableValue)),]
       gpe$DateTime <- as.POSIXct(gpe$DateTime, tz='UTC')
-      gpe <- gpe[which(gpe$DateTime >= dates[1] & gpe$DateTime <= dates[2]),]
+      #gpe <- gpe[which(gpe$DateTime >= dates[1] & gpe$DateTime <= dates[2]),]
       gpe$DateTime <- format(gpe$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
 
       if (exists('returnData')){
@@ -676,6 +700,10 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL){
 
 
     # use lightloc function (skip for now?)
+
+  }
+
+
 
 
 } # end function
