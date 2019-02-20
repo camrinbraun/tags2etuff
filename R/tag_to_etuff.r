@@ -1,6 +1,5 @@
 # WORKING:
-# deal with varying sources of SST and how to represent in eTUFF
-# histos section is a mess
+# what about applying summaryPeriod var to some of the summarized data points?
 # lightloc is not even started
 # check GPE3 section for "finished" state
 # add define waypoint source in metadata for GPE3 or position info from MTI, Lotek or SPOT tags
@@ -8,13 +7,23 @@
 
 #'
 #' @param dir is directory the target data is stored in
-#' @param manufacturer is character indicating tag manufacturer. Choices are 'Wildlife','Microwave','Lotek'.
+#' @param manufacturer is character indicating tag manufacturer. Choices are
+#'   'Wildlife','Microwave','Lotek'.
 #' @param tagtype is character. Choices are 'PSAT', 'SPOT', ...
-#' @param fName is character indicating the file name of interest to read. This is currently only used for reading archival data from Microwave or Lotek tags.
-#' @param dates is POSIXct vector of length 2 indicating start and stop dates for the tag data of interest
-#'
+#' @param fName is character indicating the file name of interest to read. This
+#'   is currently only used for reading archival data from Microwave or Lotek
+#'   tags.
+#' @param dates is POSIXct vector of length 2 indicating start and stop dates
+#'   for the tag data of interest
+#' @param tatBins is integer or numeric vector indicating the
+#'   time-at-temperature summary bins for a Wildlife tag. Length will usually be
+#'   about 14-16 bins. Defaults to NULL and the function tries to read bins from
+#'   the file.
+#' @param tadBins is integer or numeric vector indicating the time-at-depth
+#'   summary bins for a Wildlife tag. Length will usually be about 14-16 bins.
+#'   Defaults to NULL and the function tries to read bins from the file. #'
 
-tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL){
+tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBins = NULL, tadBins = NULL){
 
 #------------------------
 ## checking before we start
@@ -566,53 +575,141 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL){
       fe <- TRUE
     }
 
-    tadBins.i <- tadBins[which(tadBins$SpeciesCode %in% meta$speciescode[i] & tadBins$PTT %in% meta$ptt[i]),]
-    tatBins.i <- tatBins[which(tatBins$SpeciesCode %in% meta$speciescode[i] & tatBins$PTT %in% meta$ptt[i]),]
-
     if (fe){
       print('Getting Histos data...')
 
       # if file exists we load it
-      histo <- read.table(paste('~/work/Data/meso/', tolower(meta$speciescode[i]),
-                                '/', meta$ptt[i], '/', meta$ptt[i], '-Histos.csv', sep=''), sep=',', header=T, blank.lines.skip = F)
-      histo <- histo[which(!is.na(histo$Sum)),]
-      histo$dt <- parse_date_time(histo$Date, orders='HMS dbY', tz='UTC')
-      histo <- histo[which(histo$dt >= dates[1] & histo$dt <= dates[2]),]
-      histo$day <- as.Date(histo$dt, tz='UTC')
-      histo <- histo[which(histo$day >= as.Date(min(track$dt)) & histo$day <= as.Date(max(track$dt))),]
-      names(histo) <- tolower(names(histo))
-      histo <- histo[,tolower(c('Ptt','dt','HistType','NumBins','Sum','Bin1','Bin2','Bin3','Bin4','Bin5','Bin6','Bin7','Bin8','Bin9','Bin10','Bin11','Bin12','Bin13','Bin14'))]
-      histo.m <- reshape2::melt(histo, id.vars=tolower(c('Ptt','dt','HistType','NumBins','Sum')),
-                                measure.vars=6:19)
+      histo <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
 
-      if (any(as.numeric(difftime(histo.m$dt[2:nrow(histo.m)], histo.m$dt[1:(nrow(histo.m)-1)], units='secs')) < (24*3600))){
-        histo.m$dates <- as.Date(histo.m$dt)
-        histo.new <- data.frame(histo.m %>% group_by(ptt, dates, histtype, variable) %>% summarise(meanval=mean(value, na.rm=T)))
-        histo.new$dates <- as.POSIXct(histo.new$dates, tz='UTC')
+      # try to read bin limits from file
+      tat.lim <- histo[which(histo$HistType == 'TATLIMITS'), grep('Bin', names(histo))]
+      tat.lim <- Filter(function(x)!all(is.na(x)), tat.lim)
+      tad.lim <- histo[which(histo$HistType == 'TADLIMITS'), grep('Bin', names(histo))]
+      tad.lim <- c(Filter(function(x)!all(is.na(x)), tad.lim))
 
-      } else{
-        histo.new <- histo.m[,c('ptt','dt','histtype','variable','value')]
-        names(histo.new) <- c('ptt','dates','histtype','variable','meanval')
+      # if bins cant be read from file, check if they were specified in function call. if not, throw an error.
+      if (all(is.na(tat.lim)) & !is.null(tatBins)){
+        tat.lim <- tatBins
+      } else if (all(is.na(tat.lim)) & is.null(tatBins)){
+        stop('TAT bins could not be read from file and were not specified in function call. Please specify them and try again.')
       }
-      rm(histo.m)
 
-      histo.new <- histo.new[order(histo.new$histtype, histo.new$dates, histo.new$variable),]
-      histo.new$binmeta <- NA
-      ubins <- unique(histo.new$variable[which(histo.new$histtype == 'TAT')])
-      for (zz in 1:length(ubins)) histo.new$binmeta[which(histo.new$variable %in% ubins[zz] & histo.new$histtype == 'TAT')] <- tatBins.i[,which(names(tatBins.i) %in% ubins[zz])]
+      if (all(is.na(tad.lim)) & !is.null(tadBins)){
+        tad.lim <- tadBins
+      } else if (all(is.na(tad.lim)) & is.null(tadBins)){
+        stop('TAD bins could not be read from file and were not specified in function call. Please specify them and try again.')
+      }
 
-      ubins <- unique(histo.new$variable[which(histo.new$histtype == 'TAD')])
-      for (zz in 1:length(ubins)) histo.new$binmeta[which(histo.new$variable %in% ubins[zz] & histo.new$histtype == 'TAD')] <- tadBins.i[,which(names(tadBins.i) %in% ubins[zz])]
-      histos <- histo.new
-      meta$histos[i] <- T
+      histo <- histo[which(!is.na(histo$Sum)),]
+      histo$dt <- lubridate::parse_date_time(histo$Date, orders='HMS dbY', tz='UTC')
+      histo <- histo[which(histo$dt >= dates[1] & histo$dt <= dates[2]),]
+      histo <- subset(histo, select=-c(NumBins))
+      #histo <- Filter(function(x)!all(is.na(x)), histo)
 
-      # get rid of wonky depth sensor
-      if (meta$ptt[i] == 100976) histos$meanval[which(histos$binmeta > 1500)] <- NA
+      tat <- histo[which(histo$HistType == 'TAT'),]
+      nms <- names(tat)
+      nms[grep('Bin1$', nms)] <- 'TimeAtTempBin01'
+      nms[grep('Bin2$', nms)] <- 'TimeAtTempBin02'
+      nms[grep('Bin3$', nms)] <- 'TimeAtTempBin03'
+      nms[grep('Bin4$', nms)] <- 'TimeAtTempBin04'
+      nms[grep('Bin5$', nms)] <- 'TimeAtTempBin05'
+      nms[grep('Bin6$', nms)] <- 'TimeAtTempBin06'
+      nms[grep('Bin7$', nms)] <- 'TimeAtTempBin07'
+      nms[grep('Bin8$', nms)] <- 'TimeAtTempBin08'
+      nms[grep('Bin9$', nms)] <- 'TimeAtTempBin09'
+      nms[grep('Bin10$', nms)] <- 'TimeAtTempBin10'
+      nms[grep('Bin11$', nms)] <- 'TimeAtTempBin11'
+      nms[grep('Bin12$', nms)] <- 'TimeAtTempBin12'
+      nms[grep('Bin13$', nms)] <- 'TimeAtTempBin13'
+      nms[grep('Bin14$', nms)] <- 'TimeAtTempBin14'
+      nms[grep('Bin15$', nms)] <- 'TimeAtTempBin15'
+      nms[grep('Bin16$', nms)] <- 'TimeAtTempBin16'
+      names(tat) <- nms
+      tat <- Filter(function(x)!all(is.na(x)), tat)
+
+      tat.new <- reshape2::melt(tat, id.vars=c('dt'),
+                                measure.vars=grep('Bin', names(tat)))
+
+
+      tad <- histo[which(histo$HistType == 'TAD'),]
+      nms <- names(tad)
+      nms[grep('Bin1$', nms)] <- 'TimeAtDepthBin01'
+      nms[grep('Bin2$', nms)] <- 'TimeAtDepthBin02'
+      nms[grep('Bin3$', nms)] <- 'TimeAtDepthBin03'
+      nms[grep('Bin4$', nms)] <- 'TimeAtDepthBin04'
+      nms[grep('Bin5$', nms)] <- 'TimeAtDepthBin05'
+      nms[grep('Bin6$', nms)] <- 'TimeAtDepthBin06'
+      nms[grep('Bin7$', nms)] <- 'TimeAtDepthBin07'
+      nms[grep('Bin8$', nms)] <- 'TimeAtDepthBin08'
+      nms[grep('Bin9$', nms)] <- 'TimeAtDepthBin09'
+      nms[grep('Bin10$', nms)] <- 'TimeAtDepthBin10'
+      nms[grep('Bin11$', nms)] <- 'TimeAtDepthBin11'
+      nms[grep('Bin12$', nms)] <- 'TimeAtDepthBin12'
+      nms[grep('Bin13$', nms)] <- 'TimeAtDepthBin13'
+      nms[grep('Bin14$', nms)] <- 'TimeAtDepthBin14'
+      nms[grep('Bin15$', nms)] <- 'TimeAtDepthBin15'
+      nms[grep('Bin16$', nms)] <- 'TimeAtDepthBin16'
+      names(tad) <- nms
+      tad <- Filter(function(x)!all(is.na(x)), tad)
+
+      tad.new <- reshape2::melt(tad, id.vars=c('dt'),
+                                  measure.vars=grep('Bin', names(tad)))
+      histo.new <- rbind(tat.new, tad.new)
+      histo.new$VariableName <- histo.new$variable
+
+      # merge with obs types and do some formatting
+      histo.new <- merge(x = histo.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+      histo.new <- histo.new[,c('dt','VariableID','value','VariableName','VariableUnits')]
+      names(histo.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+
+
+      # deal with TAD bin limits
+      hdb <- obsTypes[grep('HistDepthBin', obsTypes$VariableName), c('VariableID', 'VariableName')]
+      hdb$Value <- NA
+      hdb$Value[1] <- 0
+      idx <- grep('Max', hdb$VariableName)[1:length(tad.lim)]
+      for (zz in idx){
+        hdb$Value[zz] <- unlist(tad.lim[which(idx == zz)])
+        if (which(idx == zz) != 1) hdb$Value[zz - 1] <- unlist(tad.lim[which(idx == zz) - 1]) + 0.1
+      }
+      hdb <- hdb[which(!is.na(hdb$Value)),]
+
+      # deal with TAT bin limits
+      htb <- obsTypes[grep('HistTempBin', obsTypes$VariableName), c('VariableID', 'VariableName')]
+      htb$Value <- NA
+      htb$Value[1] <- 0
+      idx <- grep('Max', htb$VariableName)[1:length(tat.lim)]
+      for (zz in idx){
+        htb$Value[zz] <- unlist(tat.lim[which(idx == zz)])
+        if (which(idx == zz) != 1) htb$Value[zz - 1] <- unlist(tat.lim[which(idx == zz) - 1]) + 0.1
+      }
+      htb <- htb[which(!is.na(htb$Value)),]
+
+
+
+      # now duplicate each bin limit data frame for each time point in the histogram data
+      tat.dates <- unique(tat.new$dt)
+      for (zz in 1:length(tat.dates)){
+        histo.new <- rbind(histo.new, data.frame(DateTime = rep(tat.dates[zz], nrow(htb)), VariableID = htb$VariableID,
+                              VariableValue = htb$Value, VariableName = htb$VariableName, VariableUnits = 'Celsius'))
+      }
+
+      tad.dates <- unique(tad.new$dt)
+      for (zz in 1:length(tad.dates)){
+        histo.new <- rbind(histo.new, data.frame(DateTime = rep(tad.dates[zz], nrow(hdb)), VariableID = hdb$VariableID,
+                                                 VariableValue = hdb$Value, VariableName = hdb$VariableName, VariableUnits = 'meter'))
+      }
+
+
+      histo.new <- histo.new[order(histo.new$DateTime, histo.new$VariableID),]
+      histo.new <- histo.new[which(!is.na(histo.new$VariableValue)),]
+      histo.new$DateTime <- as.POSIXct(histo.new$DateTime, tz='UTC')
+      histo.new$DateTime <- format(histo.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
 
       if (exists('returnData')){
-        returnData <- rbind(returnData, histos)
+        returnData <- rbind(returnData, histos.new)
       } else {
-        returnData <- histos
+        returnData <- histos.new
       }
     }
 
