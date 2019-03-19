@@ -5,6 +5,8 @@
 # add define waypoint source in metadata for GPE3 or position info from MTI, Lotek or SPOT tags
 
 
+## need to give obsTypes
+
 #'
 #' @param dir is directory the target data is stored in
 #' @param manufacturer is character indicating tag manufacturer. Choices are
@@ -23,41 +25,55 @@
 #'   summary bins for a Wildlife tag. Length will usually be about 14-16 bins.
 #'   Defaults to NULL and the function tries to read bins from the file. #'
 
-tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBins = NULL, tadBins = NULL){
+tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBins = NULL, tadBins = NULL, obsTypes = NULL){
 
 #------------------------
 ## checking before we start
 #------------------------
 
+  if (is.null(obsTypes)){
+    # try to get it from github
+    url <- "https://raw.githubusercontent.com/camrinbraun/tagbase/master/eTUFF-ObservationTypes.csv"
+    obsTypes <- try(read.csv(text=RCurl::getURL(url)), TRUE)
+
+    # if that doesnt work, kill the funciton
+    if (class(obsTypes) == 'try-error') stop(paste('obsTypes not specified in function call and unable to automatically download it from github at', url, sep=' '))
+
+  }
+
   # check the specific manufacturer is actually supported
   if (!(manufacturer %in% c('Microwave','Wildlife','Lotek'))) stop('the specified manufacturer is not supported.')
 
+  #----------
   # attempt to reconcile a poorly specified tagtype
-  if (!(tagtype %in% c(''))){
+  #----------
+  #if (!(tagtype %in% c(''))){
     # if tagtype doesnt match what we expect, try to figure it out
 
-    if (manufacturer == 'Wildlife'){
+   # if (manufacturer == 'Wildlife'){
       # check for SPOT
 
 
       # check for PSAT
 
-    }
+    #}
 
-    if (manufacturer == 'Microwave'){
+    #if (manufacturer == 'Microwave'){
       # check for PSAT
 
-    }
+    #}
 
-    if (manufacturer == 'Lotek'){
+    #if (manufacturer == 'Lotek'){
       # check for archival
 
-    }
+    #}
 
-  }
+  #}
 
+  #----------
   # check dates
-  #if (class(dates)[1] != 'POSIXct') stop('input dates must be POSIXct')
+  #----------
+  if (class(dates)[1] != 'POSIXct') stop('input to dates must be of class POSIXct')
 
 #------------------------
 ## given a SPOT directory:
@@ -77,7 +93,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
     }
 
     if (fe){
-      argos <- read.table(paste(dir, meta$ptt[i], '-Locations.csv', sep=''), sep=',', header=T, blank.lines.skip = F)
+      argos <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
 
       # organize argos.new for flatfile format
       argos.new <- argos[which(argos$Type != 'User'),]
@@ -87,7 +103,29 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
       nms[grep('error.ellipse.orientation', nms)] <- 'argosErrOrient'
       nms[grep('quality', nms)] <- 'argosLC'
       names(argos.new) <- nms
-      argos.new$date <- as.POSIXct(argos.new$date, format='%H:%M:%S %d-%b-%Y', tz='UTC')
+
+      testDates <- function(x){
+        # first try lubridate
+        dt <- suppressWarnings(try(lubridate::as_datetime(x), TRUE))
+
+        if(any(class(dt) == 'try-error') | any(is.na(dt))){
+          # then try flipTime
+          dt <- suppressWarnings(try(flipTime::AsDateTime(x), TRUE))
+
+          if(any(class(dt) == 'try-error') | any(is.na(dt))){
+            # final attempt by switching date time to time date
+            dt <- suppressWarnings(try(lubridate::parse_date_time(x, orders='HMS ymd'), TRUE))
+
+            if(any(class(dt) == 'try-error') | any(is.na(dt))){
+              stop('Tried lubridate, flipTime and HMS ymd orders but unable to figure out datetime format.')
+            }
+          }
+        }
+        return(dt)
+      }
+
+      argos.new$date <- testDates(argos.new$date[1])
+      #argos.new$date <- as.POSIXct(argos.new$date, format='%H:%M:%S %d-%b-%Y', tz='UTC')
       argos.new <- argos.new[which(argos.new$date > dates[1] & argos.new$date < dates[2]),]
       argos.new <- reshape2::melt(argos.new, id.vars=c('date'), measure.vars = c('argosLC','argosErrMaj','argosErrMin','argosErrOrient','latitude','longitude'))
       argos.new$VariableName <- argos.new$variable
@@ -134,7 +172,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
 
     if (fe){
       print(paste('Reading archival data sheet from', fName, '...'))
-      mti <- gdata::read.xls(fName, sheet='Archival Data', skip=2,
+      mti <- gdata::read.xls(fName, sheet='Real-Time Data', skip=2,
                              colClasses = c(rep(NA,7), rep('NULL', 4)),
                              header=F)
       names(mti) <- c('DateTime', 'tempval','pressureval','lightval','temperature','depth','light')
