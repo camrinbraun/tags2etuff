@@ -29,10 +29,16 @@
 #' build_meta_head(meta_row = meta[1,], filename = 'eTUFF_example.txt', global_attributes = g_atts)
 #' }
 
-build_meta_head <- function(meta_row, filename, global_attributes = NULL){
+build_meta_head <- function(meta_row, filename, metaTypes = NULL, global_attributes = NULL){
+
+  # if metatypes null, get it
+  if (is.null(metaTypes)){
+    metaTypes <- read.csv(url("https://raw.githubusercontent.com/camrinbraun/tagbase/master/eTagMetadataInventory.csv"))
+    metaTypes$Necessity[which(metaTypes$AttributeID %in% c(3,8,100,101,200,302,400:404,1000))] <- 'recommended'
+  }
 
   # melt cols to rows
-  meta.new <- reshape2::melt(meta, id.vars=c('uid_no'))
+  meta.new <- reshape2::melt(meta_row, id.vars=c('uid_no'))
 
   # filter out NA and other missing values
   meta.new <- meta.new[which(!is.na(meta.new$value)),]
@@ -45,7 +51,7 @@ build_meta_head <- function(meta_row, filename, global_attributes = NULL){
   # are we missing any essential vars?
   if (any(!(metaTypes$AttributeID[which(metaTypes$Necessity == 'required')] %in% meta.new$AttributeID))){
     idx <- which(metaTypes$Necessity == 'required')
-    idx <- idx[!(metaTypes$AttributeID[idx] %in% meta.new2$AttributeID)]
+    idx <- idx[!(metaTypes$AttributeID[idx] %in% meta.new$AttributeID)]
     missingVars <- metaTypes[idx, c(1:3)]
     e <- simpleError('missing required metadata attributes. The missing attributes have been printed to the console. To store as variable you can run foo <- build_meta_head().')
     tryCatch(stop(e), finally = return(missingVars))
