@@ -5,9 +5,16 @@
 #'
 #' @param meta_row is a row of meta spreadsheet for the deployment of interest
 #' @param filename is output filename for this eTUFF file. Needs to be .txt.
-#' @param global_att is character vector of additional global attributes to be
-#'   associated with this eTUFF file. See the example for required formatting of
-#'   vector elements.
+#' @param write_hdr is logical indicating whether or not to actually write the
+#'   header to the file specified by filename. If FALSE, the constructed header
+#'   is returned.
+#' @param global_attributes is character vector of additional global attributes
+#'   to be associated with this eTUFF file. See the example for required
+#'   formatting of vector elements.
+#' @param metaTypes is csv sourced from github containing the latest metaTypes
+#'   recognized by the NASA OIIP project. Usually this is left NULL and the file
+#'   is auto-magically downloaded for you. The only reason you may want to
+#'   specify this would be in order to work offline.
 #'
 #' @return nothing to console. header is written to disk.
 #' @export
@@ -29,7 +36,7 @@
 #' build_meta_head(meta_row = meta[1,], filename = 'eTUFF_example.txt', global_attributes = g_atts)
 #' }
 
-build_meta_head <- function(meta_row, filename, metaTypes = NULL, global_attributes = NULL){
+build_meta_head <- function(meta_row, filename, write_hdr = FALSE, metaTypes = NULL, global_attributes = NULL){
 
   # if metatypes null, get it
   if (is.null(metaTypes)){
@@ -134,11 +141,15 @@ build_meta_head <- function(meta_row, filename, metaTypes = NULL, global_attribu
   hdr[(length(hdr)+1)] <- paste('// data:', sep='')
   hdr[(length(hdr)+1)] <- paste('// DateTime,VariableID,VariableValue,VariableName,VariableUnits', sep='')
 
+  if (write_hdr){
+    # then append header info to existing file
+    cat(hdr, file = filename, sep='\n')
+    print(paste('Header written to ', filename, '.', sep=''))
 
-  cat(hdr, file = filename, sep='\n')
-
-  # later append the data to this header like below:
-  #write.table(series.new, file=filename, sep=',', append=TRUE, col.names = F, row.names = F, quote = F)
+  } else{
+    # if not, return the hdr
+    return(hdr)
+  }
 
 
 }
