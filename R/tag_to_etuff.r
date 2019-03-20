@@ -809,9 +809,13 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
 
   }
 
+
   #--------------------------
   ## FINISHED
   #--------------------------
+
+  ## cleaning step to ensure no timestamp has multiple entries for the same variableid
+  returnData <- returnData %>% distinct(DateTime, VariableID, .keep_all = TRUE)
 
   if (write_etuff){
     if (is.null(outName)) stop('Please provide outName if write_etuff = TRUE.')
