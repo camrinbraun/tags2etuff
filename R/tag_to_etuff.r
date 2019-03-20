@@ -94,11 +94,16 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
           dt <- suppressWarnings(try(flipTime::AsDateTime(x), TRUE))
 
           if(any(class(dt) == 'try-error') | any(is.na(dt))){
-            # final attempt by switching date time to time date
+            # attempt to switch date time to time date
             dt <- suppressWarnings(try(lubridate::parse_date_time(x, orders='HMS ymd'), TRUE))
 
             if(any(class(dt) == 'try-error') | any(is.na(dt))){
+              # attempt to switch date time to time date
+              dt <- suppressWarnings(try(lubridate::parse_date_time(x, orders='HMS dbY'), TRUE))
+
+              if(any(class(dt) == 'try-error') | any(is.na(dt))){
               stop('Tried lubridate, flipTime and HMS ymd orders but unable to figure out datetime format.')
+              }
             }
           }
         }
@@ -118,6 +123,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
       argos.new$DateTime <- as.POSIXct(argos.new$DateTime, tz='UTC')
       argos.new$DateTime <- format(argos.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
       argos.new <- argos.new[which(!is.na(argos.new$VariableValue)),]
+      argos.new <- argos.new[which(argos.new$VariableValue != ' '),]
 
       if (exists('returnData')){
         returnData <- rbind(returnData, argos.new)
