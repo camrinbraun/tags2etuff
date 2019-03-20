@@ -810,7 +810,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
   if (write_etuff){
     if (is.null(outName)) stop('Please provide outName if write_etuff = TRUE.')
     # then write etuff to file
-    write.table(outName, sep = ',', col.names = T, row.names = F)
+    write.table(returnData, outName, sep = ',', col.names = T, row.names = F)
     print(paste('eTUFF written to ', outName, '.', sep=''))
 
   } else{
