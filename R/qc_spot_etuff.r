@@ -39,22 +39,6 @@ qc_spot_etuff <- function(etuff, meta_row, writePDF = FALSE, cutdates = FALSE){
     print(paste('Sign of track lon is', unique(sign(df$longitude)), '.'))
   }
 
-  ## if decide to deal with cutdates...
-  ## not working yet but easily made so
-  if (cutdates){
-    cutdates <- read.table('~/work/RCode/eddies/raw/cut_dates.csv', sep=',',header=T)
-    cutdates$rm_date1 <- parse_date_time(cutdates$rm_date1, orders = 'mdy HM')
-    cutdates$rm_date2 <- parse_date_time(cutdates$rm_date2, orders = 'mdy HM')
-
-    if(any(argos$ptt[1] %in% cutdates$ptt)){
-      cut.idx <- which(cutdates$ptt %in% argos$ptt[1])
-      for (b in 1:length(cut.idx)){
-        argos <- argos[which(argos$dt < cutdates$rm_date1[cut.idx[b]] | argos$dt > cutdates$rm_date2[cut.idx[b]]),]
-      }
-    }
-  }
-
-
   #==========
   ## BUILD PLOT
   #==========
