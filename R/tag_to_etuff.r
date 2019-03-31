@@ -3,7 +3,7 @@
 # lightloc is not even started
 # check GPE3 section for "finished" state
 # add define waypoint source in metadata for GPE3 or position info from MTI, Lotek or SPOT tags
-
+# check if series should be labeled "depthMean" as summary period type measurement or not
 
 #'
 #' @param dir is directory the target data is stored in
@@ -84,6 +84,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
       nms[grep('error.ellipse.orientation', nms)] <- 'argosErrOrient'
       nms[grep('quality', nms)] <- 'argosLC'
       names(argos.new) <- nms
+      argos.new <- argos.new[which(argos.new$date != ''),]
 
       testDates <- function(x){
         # first try lubridate
@@ -113,6 +114,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
       argos.new$date <- testDates(argos.new$date)
       #argos.new$date <- as.POSIXct(argos.new$date, format='%H:%M:%S %d-%b-%Y', tz='UTC')
       argos.new <- argos.new[which(argos.new$date > dates[1] & argos.new$date < dates[2]),]
+      argos.new <- argos.new[which(argos.new$argosLC != 'Z'),]
       argos.new <- reshape2::melt(argos.new, id.vars=c('date'), measure.vars = c('argosLC','argosErrMaj','argosErrMin','argosErrOrient','latitude','longitude'))
       argos.new$VariableName <- argos.new$variable
 
@@ -525,7 +527,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
         sst$dt <- lubridate::parse_date_time(sst$Date, orders='HMS dbY', tz='UTC')
         sst <- sst[which(sst$dt >= dates[1] & sst$dt <= dates[2]),]
 
-        sst.new <- parse_sst(sst)
+        sst.new <- parse_sst(sst, obsTypes)
 
         if (exists('returnData')){
           returnData <- rbind(returnData, sst.new)
@@ -636,6 +638,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
         #histo <- Filter(function(x)!all(is.na(x)), histo)
 
         tat <- histo[which(histo$HistType == 'TAT'),]
+        tat$summaryPeriod <- Mode(difftime(tat$dt[2:nrow(tat)], tat$dt[1:(nrow(tat) - 1)], units='hours'))
         nms <- names(tat)
         nms[grep('Bin1$', nms)] <- 'TimeAtTempBin01'
         nms[grep('Bin2$', nms)] <- 'TimeAtTempBin02'
@@ -657,10 +660,11 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
         tat <- Filter(function(x)!all(is.na(x)), tat)
 
         tat.new <- reshape2::melt(tat, id.vars=c('dt'),
-                                  measure.vars=grep('Bin', names(tat)))
+                                  measure.vars=c(grep('Bin', names(tat)), grep('summaryPeriod', names(tat))))
 
 
         tad <- histo[which(histo$HistType == 'TAD'),]
+        tad$summaryPeriod <- Mode(difftime(tad$dt[2:nrow(tad)], tad$dt[1:(nrow(tad) - 1)], units='hours'))
         nms <- names(tad)
         nms[grep('Bin1$', nms)] <- 'TimeAtDepthBin01'
         nms[grep('Bin2$', nms)] <- 'TimeAtDepthBin02'
@@ -682,7 +686,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
         tad <- Filter(function(x)!all(is.na(x)), tad)
 
         tad.new <- reshape2::melt(tad, id.vars=c('dt'),
-                                  measure.vars=grep('Bin', names(tad)))
+                                  measure.vars=c(grep('Bin', names(tad)), grep('summaryPeriod', names(tad))))
         histo.new <- rbind(tat.new, tad.new)
         histo.new$VariableName <- histo.new$variable
 
@@ -690,7 +694,6 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
         histo.new <- merge(x = histo.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
         histo.new <- histo.new[,c('dt','VariableID','value','VariableName','VariableUnits')]
         names(histo.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
-
 
         # deal with TAD bin limits
         hdb <- obsTypes[grep('HistDepthBin', obsTypes$VariableName), c('VariableID', 'VariableName')]
@@ -713,8 +716,6 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
           if (which(idx == zz) != 1) htb$Value[zz - 1] <- unlist(tat.lim[which(idx == zz) - 1]) + 0.1
         }
         htb <- htb[which(!is.na(htb$Value)),]
-
-
 
         # now duplicate each bin limit data frame for each time point in the histogram data
         tat.dates <- unique(tat.new$dt)
@@ -741,6 +742,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
           returnData <- histos.new
         }
       }
+      rm(fe)
 
       #------------
       ## GPE3 - the source of these positions, in this case GPE3, would be reflected in the metadata specific to the PSAT tag as "modeled" and "GPE3"

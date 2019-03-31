@@ -37,12 +37,15 @@ parse_sst <- function(sst, obsTypes){
   }
 
   if (nrow(ml) > 0){
+
+    ml$summaryPeriod <- Mode(difftime(ml$dt[2:nrow(ml)], ml$dt[1:(nrow(ml) - 1)], units='hours'))
     nms <- names(ml)
+    #nms[grep('summ', nms)] <- 'summaryPeriod'
     nms[grep('Temperature', nms)] <- 'sstMean'
     names(ml) <- nms
 
     # summarize with melt
-    ml <- reshape2::melt(ml, id.vars=c('dt'), measure.vars = c('sstMean'))
+    ml <- reshape2::melt(ml, id.vars=c('dt'), measure.vars = c('sstMean','summaryPeriod'))
     ml$VariableName <- ml$variable
 
     # merge with obs types and do some formatting
