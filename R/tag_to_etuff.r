@@ -3,7 +3,6 @@
 # lightloc is not even started
 # check GPE3 section for "finished" state
 # add define waypoint source in metadata for GPE3 or position info from MTI, Lotek or SPOT tags
-# check if series should be labeled "depthMean" as summary period type measurement or not
 
 #'
 #' @param dir is directory the target data is stored in
@@ -321,11 +320,13 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
 
       # organize pdt.new for flatfile format
       pdt.new <- pdt
+      dtime <- difftime(pdt$Date[2:nrow(pdt)], pdt$Date[1:(nrow(pdt) - 1)], units='hours')
+      pdt.new$summaryPeriod <- Mode(dtime[dtime != 0])
       nms <- names(pdt.new)
       nms[grep('MinTemp', nms)] <- 'TempMin'
       nms[grep('MaxTemp', nms)] <- 'TempMax'
       names(pdt.new) <- nms
-      pdt.new <- reshape2::melt(pdt.new, id.vars=c('Date','BinNum'), measure.vars = c('Depth','TempMin','TempMax'))
+      pdt.new <- reshape2::melt(pdt.new, id.vars=c('Date','BinNum'), measure.vars = c('Depth','TempMin','TempMax','summaryPeriod'))
 
       binchar <- pdt.new$BinNum
       for (i in 1:length(binchar)) if (nchar(binchar[i]) < 2) binchar[i] <- paste('0', binchar[i], sep='')
@@ -426,10 +427,10 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
         # organize series.new for flatfile format
         series.new <- subset(series, select=-c(DepthSensor))
         nms <- names(series.new)
-        nms[grep('Depth', nms)] <- 'depthMean'
-        nms[grep('DRange', nms)] <- 'depthStDev'
-        nms[grep('Temperature', nms)] <- 'tempMean'
-        nms[grep('TRange', nms)] <- 'tempStDev'
+        nms[grep('Depth', nms)] <- 'depth'
+        nms[grep('DRange', nms)] <- 'depthDelta'
+        nms[grep('Temperature', nms)] <- 'temperature'
+        nms[grep('TRange', nms)] <- 'tempDelta'
         names(series.new) <- nms
         # summarize with melt
         series.new <- reshape2::melt(series.new, id.vars=c('dt'), measure.vars = c('depthMean','depthStDev','tempMean','tempStDev'))
@@ -542,7 +543,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
       ## MIXED LAYER
 
       fList <- list.files(dir, full.names = T)
-      fidx <- grep('-MixedLayer.csv', fList)
+      fidx <- grep('-MixLayer.csv', fList)
       if (length(fidx) == 0){
         print(paste('No Wildlife MixedLayer data to gather.', sep=''))
         fe <- FALSE
@@ -557,7 +558,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
 
         # if file exists we load it
         ml <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
-        ml$Date <- lubridate::parse_date_time(ml$Date, orders='HMS dbY', tz='UTC')
+        ml$Date <- lubridate::parse_date_time(ml$Date, orders=findDateFormat(ml$Date), tz='UTC')
         ml <- ml[which(ml$Date >= dates[1] & ml$Date <= dates[2]),]
 
         # organize mmd.new for flatfile format
@@ -570,6 +571,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
         nms[grep('TempMin', nms)] <- 'tempMin'
         nms[grep('DepthMin', nms)] <- 'depthMin'
         nms[grep('DepthMax', nms)] <- 'depthMax'
+        nms[grep('Hours', nms)] <- 'summaryPeriod'
         names(ml.new) <- nms
         # summarize with melt
         ml.new <- reshape2::melt(ml.new, id.vars=c('Date'), measure.vars = c('depthMin','depthMax','sstMean','sstMin','sstMax','tempMin'))
