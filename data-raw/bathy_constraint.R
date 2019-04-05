@@ -1,17 +1,7 @@
 
-# get bathymetry raster from erddap
-bathy <- HMMoce::get.bath.data(65, 115, -70, -45, folder = tempdir(), res=1)
-
-bathy.mod <- aggregate(bathy, 5)
-bathy.mod[bathy.mod > -1] <- NA
-
-bdf <- as(bathy.mod, 'SpatialPixelsDataFrame')
-crs(bdf) <- NA
-
-#devtools::use_data(x, mtcars, internal = TRUE)
-
-
-## OR
+## create bathymetry constraint for use in simulating tracks
+## resulting bdf object will be available internally to sim function(s)
+## bdf is global raster of 1/4 deg resolution indicating on land (NA) or not (1)
 
 library(maptools); library(raster)
 
@@ -27,3 +17,5 @@ r.polys[r.polys == 0] <- NA
 
 bdf <- as(r.polys, 'SpatialPixelsDataFrame')
 crs(bdf) <- NA
+
+devtools::use_data(bdf, internal = TRUE)
