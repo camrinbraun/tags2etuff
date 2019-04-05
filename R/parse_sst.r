@@ -33,7 +33,11 @@ parse_sst <- function(sst, obsTypes){
     ll <- ll[,c('dt','VariableID','value','VariableName','VariableUnits')]
     names(ll) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
 
-    all.sst <- ll
+    if (exists('all.sst')){
+      all.sst <- rbind(all.sst, ll)
+    } else{
+      all.sst <- ll
+    }
   }
 
   if (nrow(ml) > 0){
@@ -92,6 +96,6 @@ parse_sst <- function(sst, obsTypes){
   all.sst$DateTime <- as.POSIXct(all.sst$DateTime, tz='UTC')
   all.sst$DateTime <- format(all.sst$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
 
-  return(all.sst)
+  all.sst
 
 }
