@@ -690,7 +690,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
       tad.lim <- histo[which(histo$HistType == 'TADLIMITS'), grep('Bin', names(histo))]
       tad.lim <- c(Filter(function(x)!all(is.na(x)), tad.lim))
 
-      # if bins cant be read from file, check if they were specified in function call. if not, throw an error.
+      # if bins can not be read from file, check if they were specified in function call. if not, throw an error.
       if (all(is.na(tat.lim)) & !is.null(tatBins)){
         tat.lim <- tatBins
       } else if (all(is.na(tat.lim)) & is.null(tatBins)){
@@ -790,17 +790,19 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
       htb <- htb[which(!is.na(htb$Value)),]
 
       # now duplicate each bin limit data frame for each time point in the histogram data
-      tat.dates <- unique(tat.new$dt)
-      for (zz in 1:length(tat.dates)){
-        histo.new <- rbind(histo.new, data.frame(DateTime = rep(tat.dates[zz], nrow(htb)), VariableID = htb$VariableID,
+      #tat.dates <- unique(tat.new$dt)
+      #for (zz in 1:length(tat.dates)){
+      #histo.new <- rbind(histo.new, data.frame(DateTime = rep(tat.dates[zz], nrow(htb)), VariableID = htb$VariableID,
+      #                                         VariableValue = htb$Value, VariableName = htb$VariableName, VariableUnits = 'Celsius'))
+      histo.new <- rbind(histo.new, data.frame(DateTime = '', VariableID = htb$VariableID,
                                                  VariableValue = htb$Value, VariableName = htb$VariableName, VariableUnits = 'Celsius'))
-      }
+      #}
 
-      tad.dates <- unique(tad.new$dt)
-      for (zz in 1:length(tad.dates)){
-        histo.new <- rbind(histo.new, data.frame(DateTime = rep(tad.dates[zz], nrow(hdb)), VariableID = hdb$VariableID,
+      #tad.dates <- unique(tad.new$dt)
+      #for (zz in 1:length(tad.dates)){
+        histo.new <- rbind(histo.new, data.frame(DateTime = '', VariableID = hdb$VariableID,
                                                  VariableValue = hdb$Value, VariableName = hdb$VariableName, VariableUnits = 'meter'))
-      }
+      #}
 
 
       histo.new <- histo.new[order(histo.new$DateTime, histo.new$VariableID),]
