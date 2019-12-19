@@ -51,9 +51,16 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
   # check the specific manufacturer is actually supported
   if (!(manufacturer %in% c('Microwave','Wildlife','Lotek'))) stop('the specified manufacturer is not supported.')
 
-  #----------
+  # check and coerce allowable tag types
+  if (tagtype %in% c('spot','SPOT','SPOT-F','mrPATspot','spot380','spot258')){
+    tagtype <- 'SPOT'
+  } else if (tagtype %in% c('miniPAT','PAT','MK10','MK10AF','psat')){
+    tagtype <- 'PSAT'
+  } else if (!(tagtype %in% c('satellite','popup'))){
+    stop('specified tag type is required to be either satellite or popup.')
+  }
+
   # check dates
-  #----------
   if (class(dates)[1] != 'POSIXct') stop('input to dates must be of class POSIXct')
 
 #------------------------
