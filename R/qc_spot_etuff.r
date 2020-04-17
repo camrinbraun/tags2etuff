@@ -12,7 +12,7 @@ qc_spot_etuff <- function(etuff, meta_row, writePDF = FALSE, cutdates = FALSE){
   ## any where datetime and variablevalue are identical?
 
   ## spread etuff back to tidy format
-  df <- etuff %>% select(-c(VariableID, VariableUnits)) %>% spread(VariableName, VariableValue)
+  df <- etuff %>% dplyr::select(-c(VariableID, VariableUnits)) %>% spread(VariableName, VariableValue)
   df$latitude <- as.numeric(df$latitude)
   df$longitude <- as.numeric(df$longitude)
   df$DateTime <- as.POSIXct(df$DateTime, tz='UTC')
