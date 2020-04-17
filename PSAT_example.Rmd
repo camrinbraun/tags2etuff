@@ -1,0 +1,171 @@
+---
+title: "PSAT example"
+author: "Camrin Braun"
+date: "4/16/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE)
+```
+
+This is an example script for a general workflow to deal with PSAT data. Note this script is missing the following (as of 20200402):
+  * no treatment of horizontal movement (e.g. GPE3, HMMoce, or ancillary SPOT tag data)
+  * nicer etuff print function
+  * treatment of multiple time zones for a single track / dataset
+  * add metadata specific to the PSAT tag's track like "modeled" and "GPE3"
+
+
+```{r, message=F}
+library(lubridate)
+library(tidyverse)
+library(lattice)
+library(lutz)
+library(raster)
+# this should be publicly available on my github, it may install as a package but can definitely just load_all
+devtools::load_all('../tags2etuff') 
+devtools::load_all('../analyzePSAT')
+```
+
+## Raw tag data to eTUFF
+First we convert the "raw" tag data from whatever format it's in into a standardized, self-contained flat file called eTUFF. This is a product of the NASA OIIP project and is the backbone of tag data standardization in our group. For more info, check out the OIIP website and especially look over the metadata and observation data types spreadsheets in the tagbase repo on Github.
+
+Note the master metadata spreadsheet currently lives in a private repo on Github (`nip_drake`). Request access from CDB if you need it.
+
+```{r, cache=T}
+
+## tell it where your data lives
+dir <- './data/159922_2020_196385/'
+
+## load all tag metadata master sheet
+meta <- read.table('../nip_drake/RawData/all_tag_meta.csv', sep=',', header=T, blank.lines.skip = F, skip=0, stringsAsFactors = F)
+
+## we currently use a unique instrument name for each deployment (taxonserialnumber_deploymentyear_tagPTT)
+idx <- which(meta$instrument_name == '159922_2020_196385')
+tag <- as.POSIXct(meta$time_coverage_start[idx], format='%m/%d/%y', tz='UTC')
+pop <- as.POSIXct(meta$time_coverage_end[idx], format='%m/%d/%y', tz='UTC')
+
+etuff <- tag_to_etuff(dir, manufacturer = 'Wildlife',
+                      tagtype = meta$model[idx],
+                      obsTypes = NULL,
+                      dates = c(tag, pop),
+                      gpe3 = TRUE,
+                      tatBins = NULL, tadBins = NULL, write_etuff = FALSE)
+```
+
+The `tag_to_etuff` function does the magic. It's currently optimized for WC tags but can handle some MT and Lotek data types. Functionality for the less-supported types will improve (via our active development) when we actually work with more of that data. Until then, the functionality for those remains limited. But as you can see, this function is essential to the rest of what we're doing.
+
+
+Next, generate a simple QC plot to check the data before confirming the etuff conversion. Eventually this will be the final QC step prior to ingestion into the lab's SQL database. Until the db is functional, we'll base all of our subsequent code on the eTUFF file itself.
+```{r}
+g <- qc_psat_etuff(etuff, meta_row = meta[idx,], writePNG = T)
+gridExtra::grid.arrange(g)
+
+```
+
+However, when you do this for the example thresher dataset, the QC plot shows the mortality part of the data needs to be trimmed!! You may want to go back and set the "pop" date to cut the mortality out of the data for downstream analyses or at least note that mortality in the row of the metadata (which will later be stored with the data in the eTUFF file for self-contained-edness).
+
+Also note that I often do the steps above in batch for a set of data (i.e. that someone gives me for some analysis). When I do this as a batch of tag data, I have some code here to write to variables in meta that detail any known QC issues. For example, I would write a short prompt so the code will ask me to provide details on `meta$end_type` and `meta$end_details` which would be some derivation of mortality for the thresher example. See other rows in the metadata sheet for examples of what these descriptors should look like.
+
+At this point, you'd want to build the metadata header in prep for writing an eTUFF file:
+
+```{r}
+## check the meta hdr
+outName_hdr <- paste(dir, meta$instrument_name[idx], '_eTUFF_hdr.txt', sep='')
+
+## these two lines deal wtih a date issue in metadata that will eventually be fixed for the whole sheet
+meta$time_coverage_start[idx] <- as.character(as.POSIXct(meta$time_coverage_start[idx], format='%m/%d/%y', tz='UTC'))
+meta$time_coverage_end[idx] <- as.character(as.POSIXct(meta$time_coverage_end[idx], format='%m/%d/%y', tz='UTC'))
+
+## here's the metadata magic
+hdr <- build_meta_head(meta_row = meta[idx,], filename = outName_hdr, write_hdr = F)
+```
+
+This should yell at you that the QC parts of meta haven't been filled out and thus is not ready for etuff conversion. This is just a catch to make sure we aren't "approving" a file and writing it to eTUFF if it hasn't actually been QC'd.
+
+I need to fix how the metadata errors are printed but for now let's just assume we know the issue and fix it:
+
+```{r}
+## we add the QC vars it wants
+meta$found_problem[idx] <- 'no'
+meta$person_qc[idx] <- 'Camrin Braun'
+
+## and now it works
+hdr <- build_meta_head(meta_row = meta[idx,], filename = outName_hdr, write_hdr = F)
+hdr 
+```
+
+That should've fixed it and written out a big nasty pile of lovely metadata text. Next stop standardization town.
+
+If the above is all good, write the header and add the data. This is a two step process, the second step just appends etuff to the header that was just written to disk:
+
+```{r}
+build_meta_head(meta_row = meta[idx,], filename = outName_hdr, write_hdr = T)
+write.table(etuff, file = outName_hdr, sep = ',', col.names = F, row.names = F, quote = F, append=T)
+```
+
+Congrats, you now have a standardized, self-contained tag data file that can essentially be shared with and read by anyone! The best part is that now that it's standardized we can write smart analysis pipelines for standardized data. This requires no special coding each time some tiny thing about the data (on the tag side) changes because eTUFF is a standard format. Ultimately this saves us a TON of work.
+
+## eTUFF to the usual data types
+
+Start by just reading the eTUFF file we just created
+```{r}
+etuff_file <- './data/159922_2020_196385/159922_2020_196385_eTUFF_hdr.txt'
+
+etuff <- read_etuff(etuff_file)
+str(etuff)
+
+```
+
+By printing `etuff` we currently get a big sloppy data frame. In the future, we'll make a nice print function that provides a nice succinct summary of the dataset.
+
+Get the usual PDT data:
+```{r}
+pdt <- get_pdt(etuff)
+```
+
+Note this is how we'll get PDT data for any tag type with any temporal resolution. Ever. The series is even more fun but first let's run a quick LOESS interpolation on the PDT data to fill in the gaps:
+
+```{r, message=F, warning=F}
+pdt_interp <- interp_pdt(etuff)
+```
+
+Now let's get the series data. And again, this is how we'll always get series data from any tag manufacturer with any temporal resolution. Pretty neat.
+
+```{r}
+series <- get_series(etuff)
+```
+
+Oops, this throws a timezone error. The way it prints isn't super nice at the moment but what you'll decipher is the function is trying to assign multiple time zones (yes, the example thresher crossed a time zone line). We don't currently have functionality to deal wtih multiple time zones in a single tag dataset so the error is basically asking you to pick one of the options it gives you:
+```{r}
+series <- get_series(etuff, what_tz = 'Asia/Riyadh')
+```
+
+You will also notice this creates a time series from tag to pop based on the detected temporal resolution of the series data (thresher example is 75 seconds). I think it's much better to have a regularized time series with a bunch of NAs than to just have those timestamps missing completely. This is also how we calculate, for example, how much series data we have versus what is missing (i.e. wasn't transmitted). And we can do some tricks like use the LOESS interpolated depth-temp info to fill in at least some of the missing temperature measurements in the series:
+
+```{r, message=F, warning=F}
+series <- add_series_temp(series, pdt, pdt_interp)
+```
+
+
+## Still working on these
+
+This will get the track, regardless of its type or source
+```{r, eval=F, message=F, warning=F}
+track <- get_track(etuff)
+```
+
+Unless metadata suggests the fish was double-tagged, in which case, go get that instead:
+```{r, eval=F, message=F, warning=F}
+
+```
+
+
+Also need a standard sunrise/set function based on the track
+
+
+And we need some functionality for the standard plots including:
+  * TAD/TAT frequency barplots (with a day/night option)
+  * series data colored by temp
+  * interpolated PDT
+  * nice but simple map, could start with HMMoce or build_move style plots
