@@ -10,8 +10,8 @@
 #'   'Wildlife','Microwave','Lotek'.
 #' @param tagtype is character. Choices are 'PSAT', 'SPOT', ...
 #' @param fName is character indicating the file name of interest to read. This
-#'   is currently only used for reading archival data from Microwave or Lotek
-#'   tags.
+#'   is currently only required for reading archival data from Microwave or Lotek
+#'   tags. It can also be used to read individual files from WC.
 #' @param dates is POSIXct vector of length 2 indicating start and stop dates
 #'   for the tag data of interest
 #' @param tatBins is integer or numeric vector indicating the
@@ -29,13 +29,17 @@
 #'   resulting etuff to the file specified by filename. If FALSE, the
 #'   constructed etuff is returned.
 #' @param outName is output filename for this eTUFF file. Needs to be .txt.
-#'
+#' @param customCols is optional argument that allows custom specification of input columns for input \code{fName}. these custom specs must match the accepted obsTypes
 
-tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBins = NULL, tadBins = NULL, obsTypes = NULL, write_etuff = FALSE, outName = NULL, gpe3 = FALSE){
+tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBins = NULL, tadBins = NULL,
+                         obsTypes = NULL, write_etuff = FALSE, outName = NULL, gpe3 = FALSE,
+                         custom = FALSE,...){
 
-#------------------------
-## checking before we start
-#------------------------
+  args <- list(...)
+
+  #------------------------
+  ## checking before we start
+  #------------------------
 
   if (is.null(obsTypes)){
     # try to get it from github
@@ -63,9 +67,56 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
   # check dates
   if (class(dates)[1] != 'POSIXct') stop('input to dates must be of class POSIXct')
 
-#------------------------
-## given a SPOT directory:
-#------------------------
+  #------------------------
+  ## given a custom input
+  #------------------------
+
+  if ('customCols' %in% names(args)){
+    print('Using the custom columns specified in customCols argument. This is an experimental feature and is not well tested.')
+
+    customCols <- args$customCols
+
+    if (is.null(fName)) stop('fName must be specified when using custom = TRUE. This is the file name of interest.')
+
+    dat <- read.table(fName, sep=',', header=T, blank.lines.skip = F)
+
+    warning('Defining column names using customCols as specified. These MUST exactly match observation types from the obsTypes set!')
+
+    names(dat) <- customCols
+    dat <- dat[which(dat$datetime != ''),]
+
+    dat$datetime <- testDates(dat$datetime)
+    dt.idx <- which(dat$date < dates[1] | dat$date > dates[2])
+    if (length(dt.idx) > 0){
+      warning('data in input dataset that is outside the bounds of specified start/end dates.')
+      dat <- dat[-dt.idx,]
+    }
+
+    dat <- dat[which(dat$argosLC != 'Z'),]
+    dat <- reshape2::melt(dat, id.vars=c('datetime'), measure.vars = customCols[-grep('date', customCols)])
+    dat$VariableName <- dat$variable
+
+    dat <- merge(x = dat, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+    dat <- dat[,c('datetime','VariableID','value','VariableName','VariableUnits')]
+    names(dat) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+    dat <- dat[order(dat$DateTime, dat$VariableID),]
+    dat$DateTime <- as.POSIXct(dat$DateTime, tz='UTC')
+    dat$DateTime <- format(dat$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+    dat <- dat[which(!is.na(dat$VariableValue)),]
+    dat <- dat[which(dat$VariableValue != ' '),]
+
+    if (exists('returnData')){
+      returnData <- rbind(returnData, dat)
+    } else {
+      returnData <- dat
+    }
+
+  }
+
+  #------------------------
+  ## given a SPOT directory:
+  #------------------------
+
 
   if (tagtype == 'SPOT' & manufacturer == 'Wildlife'){
     # use argos-locations function - the source of this would be reflected in the metadata specific to the SPOT tag
@@ -110,7 +161,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
               dt <- suppressWarnings(try(lubridate::parse_date_time(x, orders='HMS dbY'), TRUE))
 
               if(any(class(dt) == 'try-error') | any(is.na(dt))){
-              stop('Tried lubridate, flipTime and HMS ymd orders but unable to figure out datetime format.')
+                stop('Tried lubridate, flipTime and HMS ymd orders but unable to figure out datetime format.')
               }
             }
           }
@@ -144,9 +195,9 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
     rm(fe)
   }
 
-#------------------------
-## given a PSAT directory:
-#------------------------
+  #------------------------
+  ## given a PSAT directory:
+  #------------------------
 
   #--------------------------
   ## MTI PSAT - time series data
