@@ -94,7 +94,11 @@ qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE){
   } else{
     gridExtra::arrangeGrob(grobs = list(p3, p2, p1, tad.plot, tat.plot), heights = c(2,2,4),
                            width = c(5,5), layout_matrix = lay)
+    g <- gridExtra::arrangeGrob(grobs = list(p3, p2, p1, tad.plot, tat.plot), heights = c(2,2,4),
+                                width = c(5,5), layout_matrix = lay)
     print('Should have output plot to graphics device.')
   }
+
+  return(g)
 
 }
