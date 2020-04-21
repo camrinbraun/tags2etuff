@@ -898,7 +898,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
       csvFile <- list.files(dir, full.names = T)[grep('GPE3.csv',list.files(dir, full.names = T))]
       if (length(ncFile) > 1 | length(csvFile) > 1) stop('Multiple matches to .nc or GPE3.csv in the specified directory.')
 
-      out <- getCtr_gpe3(ncFile, csvFile, threshold=50, makePlot=F)
+      out <- getCtr_gpe3(ncFile, csvFile, threshold=5, makePlot=F)
       df <- lapply(out, FUN=function(x) cbind(x$loc, x$xDist, x$yDist))
       df <- rlist::list.rbind(df)
       names(df) <- c('ptt','date','lat','lon','xDist','yDist')
