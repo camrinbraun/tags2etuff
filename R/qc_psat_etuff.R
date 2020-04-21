@@ -5,7 +5,7 @@
 #'
 
 
-qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE){
+qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
 
   ## any where datetime and variablevalue are identical?
 
@@ -82,21 +82,55 @@ qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE){
   p2 <- ggplot(data=etuff[which(etuff$VariableName == 'sst'),], aes(x=DateTime, y = VariableValue)) + geom_path(colour = 'black') + ylab('SST (C)') + xlab('')
   p3 <- ggplot(data=etuff[which(etuff$VariableName == 'light'),], aes(x=DateTime, y = VariableValue)) + geom_point(colour = 'black') + ylab('Light') + xlab('')
 
-  lay <- rbind(c(1,4),
-               c(2,4),
-               c(3,5))
+  if (map){
+    ## get world map data
+    world <- map_data('world')
+
+    df <- etuff %>% dplyr::select(-c(VariableID, VariableUnits)) %>% spread(VariableName, VariableValue)
+    df <- df[which(!is.na(df$latitude)),]
+
+    ## format date time
+    names(df)[1] <- 'datetime'
+    df$datetime <- as.POSIXct(df$datetime, tz='UTC')
+
+    ## get limits
+    xl <- c(min(df$longitude) - 2, max(df$longitude) + 2)
+    yl <- c(min(df$latitude) - 2, max(df$latitude) + 2)
+
+    ## simple map of move data
+    m1 <- ggplot() + geom_polygon(data = world, aes(x=long, y = lat, group = group)) +
+      coord_fixed(xlim=xl, ylim=yl, ratio=1.3) + xlab('') + ylab('') #+
+    #geom_path(data = pred, aes(x = lon, y = lat)) +
+
+    m1 <- m1 + geom_point(data = df, aes(x = longitude, y = latitude, colour = datetime)) #+
+      #geom_point(data = object$meta, aes(x = as.numeric(geospatial_lon_start), y = as.numeric(geospatial_lat_start)), colour = c('green'), fill = c('green'), shape = 24) +
+      #geom_point(data = object$meta, aes(x = as.numeric(geospatial_lon_end), y = as.numeric(geospatial_lat_end)), colour = c('red'), fill = c('red'), shape = 24) +
+      #ggtitle(paste(object$meta$instrument_name))
+
+  }
+
+  if (map){
+    lay <- rbind(c(1,4),
+                 c(2,4),
+                 c(3,5),
+                 c(6,6))
+    g <- gridExtra::arrangeGrob(grobs = list(p3, p2, p1, tad.plot, tat.plot, m1), heights = c(2,2,4,6),
+                                width = c(5,5), layout_matrix = lay)
+  } else{
+    lay <- rbind(c(1,4),
+                 c(2,4),
+                 c(3,5))
+
+    g <- gridExtra::arrangeGrob(grobs = list(p3, p2, p1, tad.plot, tat.plot), heights = c(2,2,4),
+                                width = c(5,5), layout_matrix = lay)
+  }
+
 
   if (writePNG){
-    g <- gridExtra::arrangeGrob(grobs = list(p3, p2, p1, tad.plot, tat.plot), heights = c(2,2,4),
-                              width = c(5,5), layout_matrix = lay)
     ggsave(file = paste(meta_row$instrument_name, '-psat_qc.png', sep=''), width=12, height=10, units = 'in', g)
     print(paste('Maps written to ', meta_row$instrument_name, '-psat_qc.pdf.', sep=''))
   } else{
-    gridExtra::arrangeGrob(grobs = list(p3, p2, p1, tad.plot, tat.plot), heights = c(2,2,4),
-                           width = c(5,5), layout_matrix = lay)
-    g <- gridExtra::arrangeGrob(grobs = list(p3, p2, p1, tad.plot, tat.plot), heights = c(2,2,4),
-                                width = c(5,5), layout_matrix = lay)
-    print('Should have output plot to graphics device.')
+    print('Capture output and use gridExtra::grid.arrange(g) to show plot in device.')
   }
 
   return(g)
