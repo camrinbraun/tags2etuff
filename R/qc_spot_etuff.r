@@ -16,14 +16,19 @@ qc_spot_etuff <- function(etuff, meta_row, writePDF = FALSE, cutdates = FALSE){
   df$latitude <- as.numeric(df$latitude)
   df$longitude <- as.numeric(df$longitude)
   df$DateTime <- as.POSIXct(df$DateTime, tz='UTC')
-  xl <- c(min(df$longitude), max(df$longitude))
-  yl <- c(min(df$latitude), max(df$latitude))
+
+
+
+  xl <- c(min(min(df$longitude), min(meta_row$geospatial_lon_start), min(meta_row$geospatial_lon_end)),
+          max(max(df$longitude), max(meta_row$geospatial_lon_start), max(meta_row$geospatial_lon_end)))
+  yl <- c(min(min(df$latitude), min(meta_row$geospatial_lat_start), min(meta_row$geospatial_lat_end)),
+          max(max(df$latitude), max(meta_row$geospatial_lat_start), max(meta_row$geospatial_lat_end)))
 
   ## check appropriate sign on start/end and track coords
   ## just send warning as possible to have diff
-  if (any(sign(df$latitude) != sign(meta_row$geospatial_lat_start) |
-          sign(df$latitude) != sign(meta_row$geospatial_lat_end) |
-          sign(meta_row$geospatial_lat_end) != sign(meta_row$geospatial_lat_start))){
+  if (any(sign(df$latitude) != sign(as.numeric(meta_row$geospatial_lat_start)) |
+          sign(df$latitude) != sign(as.numeric(meta_row$geospatial_lat_end)) |
+          sign(as.numeric(meta_row$geospatial_lat_end)) != sign(as.numeric(meta_row$geospatial_lat_start)))){
     warning('Check latitudes.')
     print(paste('Lat start', meta_row$geospatial_lat_start, '.'))
     print(paste('Lat end', meta_row$geospatial_lat_end, '.'))
@@ -53,7 +58,7 @@ qc_spot_etuff <- function(etuff, meta_row, writePDF = FALSE, cutdates = FALSE){
     geom_point(data = df, aes(x = longitude, y = latitude, colour = DateTime)) +
     geom_point(data = meta_row, aes(x = geospatial_lon_start, y = geospatial_lat_start), colour = c('green'), fill = c('green'), shape = 24) +
     geom_point(data = meta_row, aes(x = geospatial_lon_end, y = geospatial_lat_end), colour = c('red'), fill = c('red'), shape = 24) +
-    ggtitle(paste(meta_row$instrument_name))
+    ggtitle(paste(meta_row$instrument_name, meta_row$platform))
 
   p2 <- ggplot(df, aes(y = latitude, x = DateTime, colour = DateTime)) + geom_point() + geom_path() +
     geom_point(data = meta_row, aes(x = time_coverage_start, y = geospatial_lat_start), colour = c('green'), fill = c('green'), shape = 24) +
