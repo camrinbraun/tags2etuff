@@ -67,13 +67,20 @@ read_etuff <- function(etuff_file, metaTypes = NULL){
   df <- df %>% dplyr::select(-c(VariableID, VariableUnits)) %>% spread(VariableName, VariableValue)
 
   ## format date time
-  names(df)[1] <- 'datetime'
-  df$datetime <- as.POSIXct(df$datetime, tz='UTC')
+  names(df)[1] <- 'DateTime'
+
+  ## datetime is blank for histo bins
+  if (any(df$DateTime == '')){
+    bins <- df[which(df$DateTime == ''),]
+    df <- df[which(df$DateTime != ''),]
+  }
+
+  df$DateTime <- as.POSIXct(df$DateTime, tz='UTC')
   warning('Current TZ specification is UTC.')
 
   df$id <- hdr$instrument_name
 
-  etuff <- list(etuff = df, meta = hdr)
+  etuff <- list(etuff = df, meta = hdr, bins = bins)
   class(etuff) <- 'etuff'
   return(etuff)
 }
