@@ -63,7 +63,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
   }
 
   # check and coerce allowable tag types
-  if (tagtype %in% c('spot','SPOT','SPOT-F','mrPATspot','spot380','spot258')){
+  if (tagtype %in% c('spot','SPOT','SPOT-F','mrPATspot','spot380','spot258','towed SPOT')){
     tagtype <- 'SPOT'
   } else if (tagtype %in% c('miniPAT','PAT','MK10','MK10AF','psat')){
     tagtype <- 'PSAT'
@@ -868,7 +868,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
       #for (zz in 1:length(tad.dates)){
       histo.new <- rbind(histo.new, data.frame(DateTime = NA, VariableID = hdb$VariableID,
                                                VariableValue = hdb$Value, VariableName = hdb$VariableName, VariableUnits = 'meter'))
-      #}
+     #}
 
 
       histo.new <- histo.new[order(histo.new$DateTime, histo.new$VariableID),]
