@@ -3,7 +3,8 @@
 #'
 #' @param etuff is etuff file output from tag_to_etuff()
 #'
-
+#'
+#' @importFrom levelplot lattice
 
 qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
 
@@ -108,16 +109,16 @@ qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
       #geom_point(data = object$meta, aes(x = as.numeric(geospatial_lon_end), y = as.numeric(geospatial_lat_end)), colour = c('red'), fill = c('red'), shape = 24) +
       #ggtitle(paste(object$meta$instrument_name))
 
-    ggplot(res.all, aes(x=date, y=qlogis(g), ymax = qlogis(g) + g.se, ymin = qlogis(g) - g.se, colour=as.factor(step), fill = as.factor(step))) +
-      xlab('') + geom_ribbon(alpha=0.15, colour=NA)
+    #ggplot(res.all, aes(x=date, y=qlogis(g), ymax = qlogis(g) + g.se, ymin = qlogis(g) - g.se, colour=as.factor(step), fill = as.factor(step))) +
+    #  xlab('') + geom_ribbon(alpha=0.15, colour=NA)
 
-    ggplot(df, aes(x=longitude, y=latitude,
-                   ymax = latitude + latitudeError,
-                   ymin =  latitude - latitudeError,
-                   xmax = longitude + longitudeError,
-                   xmin = longitude + longitudeError,
-                   colour=date)) +
-      xlab('') + geom_ribbon(alpha=0.15, colour=NA)
+    #ggplot(df, aes(x=longitude, y=latitude,
+    #               ymax = latitude + latitudeError,
+    #               ymin =  latitude - latitudeError,
+    #               xmax = longitude + longitudeError,
+    #               xmin = longitude + longitudeError,
+    #               colour=date)) +
+    #  xlab('') + geom_ribbon(alpha=0.15, colour=NA)
 
   }
 
