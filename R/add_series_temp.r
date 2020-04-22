@@ -1,3 +1,9 @@
+#' Add temperature to series data, if possible
+#'
+#' @param series
+#' @param pdt
+#' @param pdt_interp
+
 add_series_temp <- function(series, pdt = NULL, pdt_interp = NULL){
 
   ## nice handling of optional pdt input or if an etuff is provided

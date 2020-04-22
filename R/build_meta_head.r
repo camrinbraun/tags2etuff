@@ -35,12 +35,15 @@
 #' g_atts <- c('institution = "WHOI"', 'references = "doi: xxxx"')
 #' build_meta_head(meta_row = meta[1,], filename = 'eTUFF_example.txt', global_attributes = g_atts)
 #' }
+#' @importFrom utils read.csv
+#' @importFrom utils write.table
+
 
 build_meta_head <- function(meta_row, filename, write_hdr = FALSE, metaTypes = NULL, global_attributes = NULL){
 
   # if metatypes null, get it
   if (is.null(metaTypes)){
-    metaTypes <- read.csv(url("https://raw.githubusercontent.com/camrinbraun/tagbase/master/eTagMetadataInventory.csv"))
+    metaTypes <- utils::read.csv(url("https://raw.githubusercontent.com/camrinbraun/tagbase/master/eTagMetadataInventory.csv"))
     metaTypes$Necessity[which(metaTypes$AttributeID %in% c(3,8,100,101,200,302,400:404))] <- 'recommended'
   }
 
