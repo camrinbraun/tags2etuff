@@ -965,8 +965,14 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
     print(paste('eTUFF written to ', outName, '.', sep=''))
 
   } else{
-    # if not, return the hdr
+    # if not, write to temp and return the read_etuff output
+    #return(returnData)
+    tmp <- tempfile()
+    write.table(returnData, tmp, sep = ',', col.names = T, row.names = F)
+    print(tmp)
+    returnData <- read_etuff(tmp, header = FALSE)
     return(returnData)
+
   }
 
 } # end function
