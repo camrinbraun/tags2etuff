@@ -8,7 +8,7 @@
 
 qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
 
-  ## any where datetime and variablevalue are identical?
+  ## any where DateTime and variablevalue are identical?
 
   ## spread etuff back to tidy format
   #tad <- etuff[grep('TimeAtDepthBin', etuff$VariableName),] # %>% select(-c(VariableID, VariableUnits)) %>% spread(VariableName, VariableValue)
@@ -32,8 +32,10 @@ qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
   #           max(etuff$VariableValue[which(etuff$VariableName %in% c('sst','sstMean','sstMin','sstMax'))]))
 
   # simple depth light and sst plots
-  etuff <- etuff[which(etuff$DateTime != ''),]
-  etuff$DateTime <- as.POSIXct(etuff$DateTime, tz='UTC')
+  if (class(etuff$DateTime[1]) != 'POSIXct'){
+    etuff <- etuff[which(etuff$DateTime != ''),]
+    etuff$DateTime <- as.POSIXct(etuff$DateTime, tz='UTC')
+  }
   #with(etuff[which(etuff$VariableName == 'sst'),], plot(DateTime, VariableValue, ylim=sst_lims, ylab='SST (C)', xlab=''))
   #with(etuff[which(etuff$VariableName == 'light'),], plot(DateTime, VariableValue, ylab='Light', xlab=''))
   #with(etuff[which(etuff$VariableName == 'depth'),], plot(DateTime, VariableValue, ylim=c(zlims[2], zlims[1]), ylab='Depth (m)', xlab=''))
@@ -88,12 +90,13 @@ qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
     ## get world map data
     world <- map_data('world')
 
+
     df <- etuff %>% dplyr::select(-c(VariableID, VariableUnits)) %>% spread(VariableName, VariableValue)
     df <- df[which(!is.na(df$latitude)),]
 
     ## format date time
-    names(df)[1] <- 'datetime'
-    df$datetime <- as.POSIXct(df$datetime, tz='UTC')
+    names(df)[1] <- 'DateTime'
+    df$DateTime <- as.POSIXct(df$DateTime, tz='UTC')
 
     ## get limits
     xl <- c(min(df$longitude) - 2, max(df$longitude) + 2)
@@ -109,7 +112,7 @@ qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
                             alpha = 0.5, colour = 'grey')
 
     ## add points on top
-    m1 <- m1 + geom_point(data = df, aes(x = longitude, y = latitude, colour = datetime))
+    m1 <- m1 + geom_point(data = df, aes(x = longitude, y = latitude, colour = DateTime))
 
       #geom_point(data = object$meta, aes(x = as.numeric(geospatial_lon_start), y = as.numeric(geospatial_lat_start)), colour = c('green'), fill = c('green'), shape = 24) +
       #geom_point(data = object$meta, aes(x = as.numeric(geospatial_lon_end), y = as.numeric(geospatial_lat_end)), colour = c('red'), fill = c('red'), shape = 24) +
