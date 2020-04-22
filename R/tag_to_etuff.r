@@ -11,7 +11,7 @@
 #' @param tagtype is character. Choices are 'PSAT', 'SPOT', ...
 #' @param fName is character indicating the file name of interest to read. This
 #'   is currently only required for reading archival data from Microwave or Lotek
-#'   tags. It can also be used to read individual files from WC.
+#'   tags. It can also be used to read individual files from WC or custom inputs. See `customCols` parameter.
 #' @param dates is POSIXct vector of length 2 indicating start and stop dates
 #'   for the tag data of interest
 #' @param tatBins is integer or numeric vector indicating the
@@ -35,6 +35,8 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
                          obsTypes = NULL, write_etuff = FALSE, outName = NULL, gpe3 = FALSE,...){
 
   args <- list(...)
+  if ('fName' %in% names(args)) fName <- args$fName
+  if ('customCols' %in% names(args)) customCols <- args$customCols
 
   #------------------------
   ## checking before we start
@@ -52,7 +54,13 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
   }
 
   # check the specific manufacturer is actually supported
-  if (!(manufacturer %in% c('Microwave','Wildlife','Lotek'))) stop('the specified manufacturer is not supported.')
+  #print(manufacturer); print(!exists('customCols'))
+  if (manufacturer == 'unknown'){
+    if(!exists('customCols')) stop('if manufacturer is unknown, customCols must be specified.')
+  } else if (!(manufacturer %in% c('Microwave','Wildlife','Lotek'))){
+    print('entering 2')
+    stop('the specified manufacturer is not supported.')
+  }
 
   # check and coerce allowable tag types
   if (tagtype %in% c('spot','SPOT','SPOT-F','mrPATspot','spot380','spot258','towed SPOT')){
@@ -70,14 +78,15 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
   ## given a custom input
   #------------------------
 
-  if ('customCols' %in% names(args)){
+  if (exists('customCols')){
     print('Using the custom columns specified in customCols argument. This is an experimental feature and is not well tested.')
 
-    customCols <- args$customCols
+    if (is.null(fName)) stop('fName must be specified when using customColsz. This is the file name of interest.')
 
-    if (is.null(fName)) stop('fName must be specified when using custom = TRUE. This is the file name of interest.')
+    dat <- read.table(paste(dir, fName, sep=''), sep=',', header=T, blank.lines.skip = F)
 
-    dat <- read.table(fName, sep=',', header=T, blank.lines.skip = F)
+    print(customCols)
+    print(dat[1,])
 
     warning('Defining column names using customCols as specified. These MUST exactly match observation types from the obsTypes set!')
 
@@ -191,7 +200,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
       }
     }
 
-    rm(fe)
+    if (exists('fe')) rm(fe)
   }
 
   #------------------------
@@ -250,7 +259,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
       }
     } # end fe
   } # end if tagtype
-  rm(fe)
+  if (exists('fe')) rm(fe)
 
   #--------------------------
   ## LOTEK PSAT - time series data
@@ -298,7 +307,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
       }
     } # end fe
   } # end if tagtype
-  rm(fe)
+  if (exists('fe')) rm(fe)
 
   #--------------------------
   ## LOTEK PSAT - raw position data
@@ -346,7 +355,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
       }
     } # end fe
   } # end if tagtype
-  rm(fe)
+  if (exists('fe')) rm(fe)
 
 
   #--------------------------
@@ -405,7 +414,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
         returnData <- pdt.new
       }
     } # end fe
-    rm(fe)
+    if (exists('fe')) rm(fe)
 
 
 
@@ -458,7 +467,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
         returnData <- arch.new
       }
     } # end fe
-    rm(fe)
+    if (exists('fe')) rm(fe)
 
     #--------------------------
     ## WC SERIES - depth and sometimes temperature
@@ -510,7 +519,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
         returnData <- series.new
       }
     } # end fe
-    rm(fe)
+    if (exists('fe')) rm(fe)
 
     #--------------------------
     ## WC light - light, depth and time
@@ -578,7 +587,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
         returnData <- light.new
       }
     } # end fe
-    rm(fe)
+    if (exists('fe')) rm(fe)
 
     #--------------------------
     ## WC MIN/MAX
@@ -631,7 +640,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
         returnData <- mmd.new
       }
     } # end fe
-    rm(fe)
+    if (exists('fe')) rm(fe)
 
     #------------
     ## SST
@@ -664,7 +673,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
       }
     } # end fe
 
-    rm(fe)
+    if (exists('fe')) rm(fe)
 
     #------------
     ## MIXED LAYER
@@ -719,7 +728,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
         returnData <- ml.new
       }
     } # end fe
-    rm(fe)
+    if (exists('fe')) rm(fe)
 
     #------------
     ## HISTOS
@@ -852,14 +861,14 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
       #histo.new <- rbind(histo.new, data.frame(DateTime = rep(tat.dates[zz], nrow(htb)), VariableID = htb$VariableID,
       #                                         VariableValue = htb$Value, VariableName = htb$VariableName, VariableUnits = 'Celsius'))
       histo.new <- rbind(histo.new, data.frame(DateTime = NA, VariableID = htb$VariableID,
-                                                 VariableValue = htb$Value, VariableName = htb$VariableName, VariableUnits = 'Celsius'))
+                                               VariableValue = htb$Value, VariableName = htb$VariableName, VariableUnits = 'Celsius'))
       #}
 
       #tad.dates <- unique(tad.new$dt)
       #for (zz in 1:length(tad.dates)){
-        histo.new <- rbind(histo.new, data.frame(DateTime = NA, VariableID = hdb$VariableID,
-                                                 VariableValue = hdb$Value, VariableName = hdb$VariableName, VariableUnits = 'meter'))
-      #}
+      histo.new <- rbind(histo.new, data.frame(DateTime = NA, VariableID = hdb$VariableID,
+                                               VariableValue = hdb$Value, VariableName = hdb$VariableName, VariableUnits = 'meter'))
+     #}
 
 
       histo.new <- histo.new[order(histo.new$DateTime, histo.new$VariableID),]
@@ -873,7 +882,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
         returnData <- histo.new
       }
     }
-    rm(fe)
+    if (exists('fe')) rm(fe)
 
     #------------
     ## GPE3 - the source of these positions, in this case GPE3, would be reflected in the metadata specific to the PSAT tag as "modeled" and "GPE3"
@@ -931,7 +940,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
       }
 
     }
-    rm(fe)
+    if (exists('fe')) rm(fe)
 
   } # close WC PSAT
 
@@ -943,6 +952,11 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
   ## cleaning step to ensure no timestamp has multiple entries for the same variableid
   returnData <- distinct(returnData, DateTime, VariableName, .keep_all = TRUE)
   returnData <- returnData[order(returnData$DateTime, returnData$VariableID),]
+
+  ## convert to char and fill NAs with blanks for dealing with TAD/TAT bins
+  returnData$DateTime <- as.character(returnData$DateTime)
+  returnData$DateTime[which(is.na(returnData$DateTime))] <- ''
+
 
   if (write_etuff){
     if (is.null(outName)) stop('Please provide outName if write_etuff = TRUE.')
