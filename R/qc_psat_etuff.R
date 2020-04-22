@@ -104,7 +104,13 @@ qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
       coord_fixed(xlim=xl, ylim=yl, ratio=1.3) + xlab('') + ylab('') #+
     #geom_path(data = pred, aes(x = lon, y = lat)) +
 
-    m1 <- m1 + geom_point(data = df, aes(x = longitude, y = latitude, colour = datetime)) #+
+    ## add confidence intervals
+    m1 <- m1 + geom_ellipse(data = df, aes(x = longitude, y = latitude, a = longitudeError, b = latitudeError),
+                            alpha = 0.5, colour = 'grey')
+
+    ## add points on top
+    m1 <- m1 + geom_point(data = df, aes(x = longitude, y = latitude, colour = datetime))
+
       #geom_point(data = object$meta, aes(x = as.numeric(geospatial_lon_start), y = as.numeric(geospatial_lat_start)), colour = c('green'), fill = c('green'), shape = 24) +
       #geom_point(data = object$meta, aes(x = as.numeric(geospatial_lon_end), y = as.numeric(geospatial_lat_end)), colour = c('red'), fill = c('red'), shape = 24) +
       #ggtitle(paste(object$meta$instrument_name))
