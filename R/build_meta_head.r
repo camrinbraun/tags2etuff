@@ -64,7 +64,9 @@ build_meta_head <- function(meta_row, filename, write_hdr = FALSE, metaTypes = N
     idx <- idx[!(metaTypes$AttributeID[idx] %in% meta.new$AttributeID)]
     missingVars <- metaTypes[idx, c(1:3)]
     e <- simpleError('missing required metadata attributes. The missing attributes have been printed to the console. To store as variable you can run foo <- build_meta_head().')
-    tryCatch(stop(e), finally = return(missingVars))
+    print(missingVars)
+    stop(print(e))
+    #tryCatch(stop(e), finally = return(missingVars))
 
   }
 
