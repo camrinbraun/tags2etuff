@@ -32,7 +32,7 @@
 #' @param customCols is optional argument that allows custom specification of input columns for input \code{fName}. these custom specs must match the accepted obsTypes
 
 tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBins = NULL, tadBins = NULL,
-                         obsTypes = NULL, write_etuff = FALSE, outName = NULL, gpe3 = FALSE, ...){
+                         obsTypes = NULL, write_etuff = FALSE, outName = NULL, gpe3 = FALSE,...){
 
   args <- list(...)
   if ('fName' %in% names(args)) fName <- args$fName

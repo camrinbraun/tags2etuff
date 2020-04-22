@@ -1,3 +1,8 @@
+#' Get header as metadata from eTUFF file
+#'
+#' @param etuff_file is file name to etuff file of interest
+#'
+
 get_etuff_hdr <- function(etuff_file){
   x <- scan(etuff_file, what = character(), sep=',')
 
