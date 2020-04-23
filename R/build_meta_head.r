@@ -48,6 +48,7 @@ build_meta_head <- function(meta_row, filename, write_hdr = FALSE, metaTypes = N
   }
 
   # melt cols to rows
+  for (i in 1:ncol(meta_row)) meta_row[,i] <- as.character(meta_row[,i]) # need to be as.character to preserve dates
   meta.new <- reshape2::melt(meta_row, id.vars=c('uid_no'))
 
   # filter out NA and other missing values
