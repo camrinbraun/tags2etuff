@@ -969,7 +969,6 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
     #return(returnData)
     tmp <- tempfile()
     write.table(returnData, tmp, sep = ',', col.names = T, row.names = F)
-    print(tmp)
     returnData <- read_etuff(tmp, header = FALSE)
     return(returnData)
 
