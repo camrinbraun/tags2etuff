@@ -25,18 +25,46 @@
 #'   recognized by the NASA OIIP project. Usually this is left NULL and the file
 #'   is auto-magically downloaded for you. The only reason you may want to
 #'   specify this would be in order to work offline.
-#' @param write_etuff is logical indicating whether or not to actually write the
-#'   resulting etuff to the file specified by filename. If FALSE, the
-#'   constructed etuff is returned.
-#' @param outName is output filename for this eTUFF file. Needs to be .txt.
 #' @param customCols is optional argument that allows custom specification of input columns for input \code{fName}. these custom specs must match the accepted obsTypes
 
-tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBins = NULL, tadBins = NULL,
-                         obsTypes = NULL, write_etuff = FALSE, outName = NULL, gpe3 = FALSE,...){
+tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = NULL,
+                         obsTypes = NULL, check_meta = TRUE,...){
+
+  #if (check_meta) build_meta_head(meta_row = meta_row, write_hdr = F)
 
   args <- list(...)
   if ('fName' %in% names(args)) fName <- args$fName
   if ('customCols' %in% names(args)) customCols <- args$customCols
+
+  if ('manufacturer' %in% names(args)){
+    manufacturer <- args$manufacturer
+  } else {
+    manufacturer <- meta_row$manufacturer
+  }
+
+  ## need tag type
+  if ('tagtype' %in% names(args)){
+    tagtype <- args$tagtype
+  } else{
+    tagtype <- meta_row$model
+  }
+
+  ## start and end dates
+  if ('dates' %in% names(args)){
+    dates <- args$dates
+  } else{
+    if (!is.POSIXct(meta_row$time_coverage_start) | !is.POSIXct(meta_row$time_coverage_end)) stop('Start and end times specified by meta_row must be of class POSIXct.')
+    dates <- c(meta_row$time_coverage_start, meta_row$time_coverage_end)
+  }
+
+  ## get gpe3 logical
+  if ('gpe3' %in% names(args)){
+    gpe3 <- args$gpe3
+  } else if(!is.na(meta_row$waypoints_method)){
+    if (meta_row$waypoints_method == 'GPE3') gpe3 <- TRUE
+  } else{
+    gpe3 <- FALSE
+  }
 
   #------------------------
   ## checking before we start
@@ -57,7 +85,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
   #print(manufacturer); print(!exists('customCols'))
   if (manufacturer == 'unknown'){
     if(!exists('customCols')) stop('if manufacturer is unknown, customCols must be specified.')
-  } else if (!(manufacturer %in% c('Microwave','Wildlife','Lotek'))){
+  } else if (!(manufacturer %in% c('Microwave','Wildlife','Wildlife Computers', 'Lotek'))){
     print('entering 2')
     stop('the specified manufacturer is not supported.')
   }
@@ -957,22 +985,26 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
   returnData$DateTime <- as.character(returnData$DateTime)
   returnData$DateTime[which(is.na(returnData$DateTime))] <- ''
 
+  ## output of class etuff
+  df <- returnData %>% dplyr::select(-c(VariableID, VariableUnits)) %>% spread(VariableName, VariableValue)
 
-  if (write_etuff){
-    if (is.null(outName)) stop('Please provide outName if write_etuff = TRUE.')
-    # then write etuff to file
-    write.table(returnData, outName, sep = ',', col.names = T, row.names = F)
-    print(paste('eTUFF written to ', outName, '.', sep=''))
-
-  } else{
-    # if not, write to temp and return the read_etuff output
-    #return(returnData)
-    tmp <- tempfile()
-    write.table(returnData, tmp, sep = ',', col.names = T, row.names = F)
-    returnData <- read_etuff(tmp, header = FALSE)
-    return(returnData)
-
+  ## datetime is blank for histo bins and incorporates adjustments above for bins whether or not theyre provided as inputs
+  if (any(df$DateTime == '')){
+    bins <- df[which(df$DateTime == ''),]
+    drop_idx <- which(apply(bins, 2, FUN=function(x) all(is.na(x) | x == '')))
+    bins <- bins[,-drop_idx]
+    df <- df[which(df$DateTime != ''),]
   }
+  if (!exists('bins')) bins <- NULL
 
-} # end function
+  df$DateTime <- as.POSIXct(df$DateTime, tz='UTC')
+  df$id <- meta_row$instrument_name
+
+  etuff <- list(etuff = df, meta = meta_row, bins = bins)
+  class(etuff) <- 'etuff'
+  return(etuff)
+}# end function
+
+
+
 

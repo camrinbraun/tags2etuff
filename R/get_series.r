@@ -13,17 +13,17 @@ get_series <- function(etuff, temp_res = NULL, what_tz = NULL){
 
   ## if no temporal resolution is specified, try to detect it (this should nearly always work with a PSAT tag)
   if (is.null(temp_res)){
-    series <- df[,c('datetime','depth','temperature')]
-    series <- series[which(!is.na(series$datetime)),]
-    temp_res <- Mode(as.numeric(diff(series$datetime)))
+    series <- df[,c('DateTime','depth','temperature')]
+    series <- series[which(!is.na(series$DateTime)),]
+    temp_res <- Mode(as.numeric(diff(series$DateTime)))
     print(paste('No temporal resolution specified. Mode of diff(timeseries) yielded ', temp_res, 'seconds.', sep=''))
   }
 
   ## get and format series
   ## save a little time by checking here in case series has already been formatted, mostly for large archival tag records
   if (!exists('series')){
-    series <- df[,c('datetime','depth','temperature')]
-    series <- series[which(!is.na(series$datetime)),]
+    series <- df[,c('DateTime','depth','temperature')]
+    series <- series[which(!is.na(series$DateTime)),]
   }
 
 
@@ -37,15 +37,15 @@ get_series <- function(etuff, temp_res = NULL, what_tz = NULL){
     ## setup output dates
     start <- with_tz(meta$time_coverage_start, what_tz)
     end <- with_tz(meta$time_coverage_end, what_tz)
-    dt_vec <- data.frame(datetime = seq(start, end, by = temp_res))
+    dt_vec <- data.frame(DateTime = seq(start, end, by = temp_res))
 
     ## convert series to local tz
-    series$datetime <- with_tz(series$datetime, tzone = what_tz)
+    series$DateTime <- with_tz(series$DateTime, tzone = what_tz)
 
   }
 
   ## merge depth/temp series data onto what full series would look like
-  series <- dplyr::left_join(dt_vec, series, by = "datetime")
+  series <- dplyr::left_join(dt_vec, series, by = "DateTime")
 
   return(series)
 }

@@ -83,8 +83,10 @@ read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
   names(df)[1] <- 'DateTime'
 
   ## datetime is blank for histo bins
-  if (any(df$DateTime == '')){
-    bins <- df[which(df$DateTime == ''),]
+  if (any(df$DateTime == '' | is.na(df$DateTime))){
+    bins <- df[which(df$DateTime == '' | is.na(df$DateTime)),]
+    drop_idx <- which(apply(bins, 2, FUN=function(x) all(is.na(x) | x == '')))
+    bins <- bins[,-drop_idx]
     df <- df[which(df$DateTime != ''),]
   }
 
@@ -92,6 +94,8 @@ read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
   warning('Current TZ specification is UTC.')
 
   df$id <- hdr$instrument_name
+
+  if (!exists('bins')) bins <- NULL
 
   etuff <- list(etuff = df, meta = hdr, bins = bins)
   class(etuff) <- 'etuff'

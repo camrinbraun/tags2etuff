@@ -22,8 +22,8 @@ qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
     etuff$DateTime <- as.POSIXct(etuff$DateTime, tz='UTC')
   }
 
-  bins <- reshape2::melt(bins, id.vars=c('DateTime'))
-  names(bins) <- c('DateTime','VariableName','VariableValue')
+  bins <- reshape2::melt(bins)#, id.vars=c('DateTime'))
+  names(bins) <- c('VariableName','VariableValue')
 
 
   #==========
@@ -79,26 +79,30 @@ qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
   sst <- sst[which(!is.na(sst$VariableValue)),]
 
   ## Build plots
-  p1 <- ggplot(etuff[which(etuff$VariableName == 'depth'),], aes(x=DateTime, y=VariableValue * -1)) +
+  p1 <- ggplot(etuff[which(etuff$VariableName == 'depth'),], aes(x=DateTime, y=as.numeric(VariableValue) * -1)) +
     geom_point(colour = 'black') + ylab('Depth (m)') +
-    geom_path(data = etuff[which(etuff$VariableName == 'depthMax'),], aes(x=DateTime, y=VariableValue * -1), colour='red') +
-    geom_path(data = etuff[which(etuff$VariableName == 'depthMin'),], aes(x=DateTime, y=VariableValue * -1), colour='blue')
-  p2 <- ggplot(data=sst, aes(x=DateTime, y = VariableValue)) + geom_path(colour = 'black') + ylab('SST (C)') + xlab('')
-  p3 <- ggplot(data=etuff[which(etuff$VariableName == 'light'),], aes(x=DateTime, y = VariableValue)) + geom_point(colour = 'black') + ylab('Light') + xlab('')
+    geom_path(data = etuff[which(etuff$VariableName == 'depthMax'),], aes(x=DateTime, y=as.numeric(VariableValue) * -1), colour='red') +
+    geom_path(data = etuff[which(etuff$VariableName == 'depthMin'),], aes(x=DateTime, y=as.numeric(VariableValue) * -1), colour='blue')
+  p2 <- ggplot(data=sst, aes(x=DateTime, y = as.numeric(VariableValue))) + geom_path(colour = 'black') + ylab('SST (C)') + xlab('')
+  p3 <- ggplot(data=etuff[which(etuff$VariableName == 'light'),], aes(x=DateTime, y = as.numeric(VariableValue))) + geom_point(colour = 'black') + ylab('Light') + xlab('')
 
   if (map){
     ## get world map data
     world <- map_data('world')
 
-
+    if (!any(etuff$VariableName == 'latitude')) stop('map = TRUE but not lat/lon data in etuff.')
     df <- etuff %>% spread(VariableName, VariableValue)
     df <- df[which(!is.na(df$latitude)),]
 
     ## format date time
-    names(df)[1] <- 'DateTime'
-    df$DateTime <- as.POSIXct(df$DateTime, tz='UTC')
+    #names(df)[1] <- 'DateTime'
+    #df$DateTime <- as.POSIXct(df$DateTime, tz='UTC')
 
     ## get limits
+    df$longitude <- as.numeric(df$longitude)
+    df$latitude <- as.numeric(df$latitude)
+    df$longitudeError <- as.numeric(df$longitudeError)
+    df$latitudeError <- as.numeric(df$latitudeError)
     xl <- c(min(df$longitude) - 2, max(df$longitude) + 2)
     yl <- c(min(df$latitude) - 2, max(df$latitude) + 2)
 
