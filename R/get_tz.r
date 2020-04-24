@@ -6,8 +6,8 @@ get_tz <- function(etuff, what_tz = NULL){
 
   ## get track to calc time zone(s) if this etuff has a track
   if ('latitude' %in% names(df) & 'longitude' %in% names(df)){
-    locs <- df[,c('datetime','latitude','longitude')]
-    locs <- locs[which(!is.na(locs$datetime) & !is.na(locs$latitude) & !is.na(locs$longitude)),]
+    locs <- df[,c('DateTime','latitude','longitude')]
+    locs <- locs[which(!is.na(locs$DateTime) & !is.na(locs$latitude) & !is.na(locs$longitude)),]
 
   }
 
@@ -24,7 +24,7 @@ get_tz <- function(etuff, what_tz = NULL){
 
   } else if (is.null(what_tz) & ('latitude' %in% names(df) & 'longitude' %in% names(df))){
 
-    locs$day <- as.Date(locs$datetime)
+    locs$day <- as.Date(locs$DateTime)
     locs <- locs[!duplicated(locs$day),]
     what_tz <- lutz::tz_lookup_coords(lat = locs$latitude, lon = locs$longitude, method = "accurate")
     print(paste('No time zone specified. Detecting and using the time zone(s) from the tracking data. Unique time zones applied to the dataset are: ', unique(what_tz), '.', sep=''))
