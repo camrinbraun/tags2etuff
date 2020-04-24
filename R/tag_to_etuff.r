@@ -902,7 +902,7 @@ tag_to_etuff <- function(dir, manufacturer, tagtype, dates, fName = NULL, tatBin
       print('Getting GPE3 data...')
 
       #setwd(myDir)
-      ncFile <- list.files(dir, full.names = T)[grep('.nc', list.files(dir, full.names = T))]
+      ncFile <- list.files(dir, full.names = T)[grep('GPE3.nc', list.files(dir, full.names = T))]
       csvFile <- list.files(dir, full.names = T)[grep('GPE3.csv',list.files(dir, full.names = T))]
       if (length(ncFile) > 1 | length(csvFile) > 1) stop('Multiple matches to .nc or GPE3.csv in the specified directory.')
 
