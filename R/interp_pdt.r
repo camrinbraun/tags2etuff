@@ -6,10 +6,10 @@ interp_pdt <- function(pdt, span_x = 5, span_y = 150){
   }
 
   ## prep the dates
-  pdt$date <- as.Date(pdt$datetime)
-  ddates <- pdt$datetime
+  pdt$date <- as.Date(pdt$DateTime)
+  ddates <- pdt$DateTime
   year <- as.numeric(format(ddates, '%Y')) #extracts year
-  pdt$doy <- lubridate::yday(pdt$datetime)
+  pdt$doy <- lubridate::yday(pdt$DateTime)
 
   ## here we use mid-point
   pdt$PdtTempMid <- (pdt$PdtTempMax - pdt$PdtTempMin) / 2 + pdt$PdtTempMin

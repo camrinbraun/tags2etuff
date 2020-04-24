@@ -8,47 +8,41 @@
 
 qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
 
-  ## any where DateTime and variablevalue are identical?
+  if (class(etuff) != 'etuff') stop('Input etuff object must be of class etuff.')
 
-  ## spread etuff back to tidy format
-  #tad <- etuff[grep('TimeAtDepthBin', etuff$VariableName),] # %>% select(-c(VariableID, VariableUnits)) %>% spread(VariableName, VariableValue)
-  #zbins <- etuff[grep('HistDepth', etuff$VariableName),] %>% distinct(VariableValue)
-  #df$DateTime <- as.POSIXct(df$DateTime, tz='UTC')
+  bins <- etuff$bins
+  meta <- etuff$meta
+  #etuff <- etuff$etuff
 
-  #tlims <- c(min(df$DateTime), max(df$DateTime))
-  #zlims <- c(min(c(min(df$depthMin, na.rm = T), min(df$depth, na.rm = T))),
-  #           max(c(max(df$depthMax, na.rm = T), max(df$depth, na.rm = T))))
+  etuff <- reshape2::melt(etuff$etuff, id.vars=c('DateTime'))
+  names(etuff) <- c('DateTime','VariableName','VariableValue')
+
+  if (class(etuff$DateTime)[1] != 'POSIXct'){
+    etuff <- etuff[which(etuff$DateTime != ''),]
+    etuff$DateTime <- as.POSIXct(etuff$DateTime, tz='UTC')
+  }
+
+  bins <- reshape2::melt(bins)#, id.vars=c('DateTime'))
+  names(bins) <- c('VariableName','VariableValue')
+
 
   #==========
   ## BUILD PLOT
   #==========
 
-  # get depth limits
-  #zlims <- c(min(etuff$VariableValue[which(etuff$VariableName %in% c('depth','depthMin','depthMax'))]),
-  #           max(etuff$VariableValue[which(etuff$VariableName %in% c('depth','depthMin','depthMax'))]))
-
-  # get sst limits
-  #sst_lims <- c(min(etuff$VariableValue[which(etuff$VariableName %in% c('sst','sstMean','sstMin','sstMax'))]),
-  #           max(etuff$VariableValue[which(etuff$VariableName %in% c('sst','sstMean','sstMin','sstMax'))]))
-
-  # simple depth light and sst plots
-  if (class(etuff$DateTime[1]) != 'POSIXct'){
-    etuff <- etuff[which(etuff$DateTime != ''),]
-    etuff$DateTime <- as.POSIXct(etuff$DateTime, tz='UTC')
-  }
-  #with(etuff[which(etuff$VariableName == 'sst'),], plot(DateTime, VariableValue, ylim=sst_lims, ylab='SST (C)', xlab=''))
-  #with(etuff[which(etuff$VariableName == 'light'),], plot(DateTime, VariableValue, ylab='Light', xlab=''))
-  #with(etuff[which(etuff$VariableName == 'depth'),], plot(DateTime, VariableValue, ylim=c(zlims[2], zlims[1]), ylab='Depth (m)', xlab=''))
+  ## simple depth light and sst plots
 
   # tad/tat plots
-  tad_bins <- etuff[grep('HistDepthBin', etuff$VariableName),]
+  tad_bins <- bins[grep('HistDepthBin', bins$VariableName),]
   if (nrow(tad_bins) == 0){
-    tad.plot <- ggplot()+geom_blank(aes(1,1)) +
+    tad.plot <- ggplot() + geom_blank(aes(1,1)) +
       cowplot::theme_nothing()
-    tat.plot <- ggplot()+geom_blank(aes(1,1)) +
+    tat.plot <- ggplot() + geom_blank(aes(1,1)) +
       cowplot::theme_nothing()
   } else{
+
     tad <- etuff[grep('TimeAtDepth', etuff$VariableName),]
+    tad <- tad[which(!is.na(tad$VariableValue)),]
     tad$binMin <- NA; tad$binMax <- NA
     binNames <- unique(tad$VariableName)
     binNames <- substr(binNames, 15, 17)
@@ -62,8 +56,9 @@ qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
     tad.plot <- levelplot(tad$VariableValue ~ tad$DateTime * tad$binMax, col.regions = jet.colors, ylim=c(1005,0),
                           xlab='', ylab='Depth (m)')#, main='Time-at-depth (%)')
 
-    tat_bins <- etuff[grep('HistTempBin', etuff$VariableName),]
+    tat_bins <- bins[grep('HistTempBin', bins$VariableName),]
     tat <- etuff[grep('TimeAtTemp', etuff$VariableName),]
+    tat <- tat[which(!is.na(tat$VariableValue)),]
     tat$binMin <- NA; tat$binMax <- NA
     binNames <- unique(tat$VariableName)
     binNames <- substr(binNames, 14, 16)
@@ -79,26 +74,35 @@ qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
 
   }
 
-  p1 <- ggplot(etuff[which(etuff$VariableName == 'depth'),], aes(x=DateTime, y=VariableValue * -1)) +
+  ## get SST
+  sst <- etuff[which(etuff$VariableName == 'sst'),]
+  sst <- sst[which(!is.na(sst$VariableValue)),]
+
+  ## Build plots
+  p1 <- ggplot(etuff[which(etuff$VariableName == 'depth'),], aes(x=DateTime, y=as.numeric(VariableValue) * -1)) +
     geom_point(colour = 'black') + ylab('Depth (m)') +
-    geom_path(data = etuff[which(etuff$VariableName == 'depthMax'),], aes(x=DateTime, y=VariableValue * -1), colour='red') +
-    geom_path(data = etuff[which(etuff$VariableName == 'depthMin'),], aes(x=DateTime, y=VariableValue * -1), colour='blue')
-  p2 <- ggplot(data=etuff[which(etuff$VariableName == 'sst'),], aes(x=DateTime, y = VariableValue)) + geom_path(colour = 'black') + ylab('SST (C)') + xlab('')
-  p3 <- ggplot(data=etuff[which(etuff$VariableName == 'light'),], aes(x=DateTime, y = VariableValue)) + geom_point(colour = 'black') + ylab('Light') + xlab('')
+    geom_path(data = etuff[which(etuff$VariableName == 'depthMax'),], aes(x=DateTime, y=as.numeric(VariableValue) * -1), colour='red') +
+    geom_path(data = etuff[which(etuff$VariableName == 'depthMin'),], aes(x=DateTime, y=as.numeric(VariableValue) * -1), colour='blue')
+  p2 <- ggplot(data=sst, aes(x=DateTime, y = as.numeric(VariableValue))) + geom_path(colour = 'black') + ylab('SST (C)') + xlab('')
+  p3 <- ggplot(data=etuff[which(etuff$VariableName == 'light'),], aes(x=DateTime, y = as.numeric(VariableValue))) + geom_point(colour = 'black') + ylab('Light') + xlab('')
 
   if (map){
     ## get world map data
     world <- map_data('world')
 
-
-    df <- etuff %>% dplyr::select(-c(VariableID, VariableUnits)) %>% spread(VariableName, VariableValue)
+    if (!any(etuff$VariableName == 'latitude')) stop('map = TRUE but not lat/lon data in etuff.')
+    df <- etuff %>% spread(VariableName, VariableValue)
     df <- df[which(!is.na(df$latitude)),]
 
     ## format date time
-    names(df)[1] <- 'DateTime'
-    df$DateTime <- as.POSIXct(df$DateTime, tz='UTC')
+    #names(df)[1] <- 'DateTime'
+    #df$DateTime <- as.POSIXct(df$DateTime, tz='UTC')
 
     ## get limits
+    df$longitude <- as.numeric(df$longitude)
+    df$latitude <- as.numeric(df$latitude)
+    df$longitudeError <- as.numeric(df$longitudeError)
+    df$latitudeError <- as.numeric(df$latitudeError)
     xl <- c(min(df$longitude) - 2, max(df$longitude) + 2)
     yl <- c(min(df$latitude) - 2, max(df$latitude) + 2)
 
@@ -108,8 +112,8 @@ qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
     #geom_path(data = pred, aes(x = lon, y = lat)) +
 
     ## add confidence intervals
-    m1 <- m1 + geom_ellipse(data = df, aes(x = longitude, y = latitude, a = longitudeError, b = latitudeError),
-                            alpha = 0.5, colour = 'grey')
+    m1 <- m1 + geom_ellipse(data = df, aes(x0 = longitude, y0 = latitude, a = longitudeError, b = latitudeError, angle = 0),
+                            alpha = 0.1, fill = 'grey', colour = 'grey')
 
     ## add points on top
     m1 <- m1 + geom_point(data = df, aes(x = longitude, y = latitude, colour = DateTime))

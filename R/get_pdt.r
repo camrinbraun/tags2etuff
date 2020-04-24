@@ -10,20 +10,20 @@ get_pdt <- function(etuff){
   if (length(idx) == 0) stop('No names in this eTUFF file correspond to PDT data.')
 
   pdt <- df[,idx]
-  pdt <- cbind(datetime = df$datetime, pdt)
-  pdt <- pdt[which(!is.na(pdt$datetime) & !is.na(pdt$PdtDepth01)),]
-  pdt$day <- as.Date(pdt$datetime)
+  pdt <- cbind(DateTime = df$DateTime, pdt)
+  pdt <- pdt[which(!is.na(pdt$DateTime) & !is.na(pdt$PdtDepth01)),]
+  pdt$day <- as.Date(pdt$DateTime)
 
   vars = names(pdt)[grep('pdt', names(pdt), ignore.case = TRUE)]
 
   pdt <- stats::reshape(pdt, ids = pdt$day, direction = 'long',
                         varying = vars, times = vars, sep='')#, timevar = 'BinNum')
 
-  pdt <- pdt[,c('datetime','PdtDepth','PdtTempMax','PdtTempMin')]
+  pdt <- pdt[,c('DateTime','PdtDepth','PdtTempMax','PdtTempMin')]
   row.names(pdt) <- NULL
 
 
-  pdt <- pdt[order(pdt$datetime, pdt$PdtDepth),]
+  pdt <- pdt[order(pdt$DateTime, pdt$PdtDepth),]
 
   return(pdt)
 
