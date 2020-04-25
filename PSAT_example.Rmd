@@ -1,8 +1,8 @@
 ---
 title: "PSAT example"
 author: "Camrin Braun"
-date: "4/16/2020"
-output: html_document
+date: "Last updated: `r Sys.Date()`"
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
