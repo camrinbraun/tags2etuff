@@ -37,18 +37,15 @@ get_series <- function(etuff, temp_res = NULL, what_tz = NULL){
     ## setup output dates
     start <- with_tz(meta$time_coverage_start, what_tz)
     end <- with_tz(meta$time_coverage_end, what_tz)
-    dt_vec <- data.frame(DateTime = seq(start, end, by = temp_res))
+    dt_vec <- data.frame(DateTime_local = seq(start, end, by = temp_res))
 
     ## convert series to local tz
-    series$DateTime <- with_tz(series$DateTime, tzone = what_tz)
+    series$DateTime_local <- with_tz(series$DateTime, tzone = what_tz)
 
   }
 
   ## merge depth/temp series data onto what full series would look like
-  series <- dplyr::left_join(dt_vec, series, by = "DateTime")
+  series <- dplyr::left_join(dt_vec, series, by = "DateTime_local")
 
   return(series)
 }
-
-
-
