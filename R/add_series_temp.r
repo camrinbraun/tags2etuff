@@ -4,7 +4,7 @@
 #' @param pdt
 #' @param pdt_interp
 
-add_series_temp <- function(series, pdt = NULL, pdt_interp = NULL){
+add_series_temp <- function(series, pdt = NULL, pdt_interp = NULL, flag = TRUE){
 
   ## nice handling of optional pdt input or if an etuff is provided
   if (is.null(pdt)){
@@ -31,7 +31,7 @@ add_series_temp <- function(series, pdt = NULL, pdt_interp = NULL){
   series$date <- series$DateTime
   series$doy <- lubridate::yday(series$DateTime)
   start_NAs <- length(which(is.na(series$temperature)))
-  series_df <- getSeriesTemp(series, pdt, loess = pdt_interp, flag = TRUE)
+  series_df <- getSeriesTemp(series, pdt, loess = pdt_interp, flag = flag)
 
   idx <- which(is.na(series$temperature))
   series$temperature[idx] <- series_df$temperature[idx]
