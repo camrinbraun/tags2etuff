@@ -152,7 +152,10 @@ srss <- get_srss(etuff, series)
 ```{r message=F, warning=F}
 
 srss <- srss[which(srss$DateTime < max(series$DateTime_local)),]
-ggplot(srss) + geom_rect(aes(xmin=sunrise, xmax=sunset, ymin=-650, ymax=0), alpha=0.25, colour='grey') +
+## use the nighttime interval from srss to easily grab the next day's sunrise as the "end of night" period for plotting
+srss$end_night <- srss$night_interval@start + srss$night_interval@.Data
+  
+ggplot(srss) + geom_rect(aes(xmin=sunset, xmax=end_night, ymin=-650, ymax=0), alpha=0.25, colour='grey') +
   geom_point(data = series, aes(x=DateTime, y=depth * -1, colour=temperature)) + ylim(-650,0)
 
 ```

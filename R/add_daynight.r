@@ -4,10 +4,6 @@ add_daynight <- function(series, etuff){
 
   ## get sunrise/sunset times
   srss <- get_srss(etuff, series = series)
-  srss$day_interval <- interval(srss$sunrise, srss$sunset)
-
-  suppressWarnings(srss$night_interval <- interval(srss$sunset, srss$sunrise[2:nrow(srss)]))
-  srss$night_interval[nrow(srss)] <- NA
 
   ## designate day/night
   dt_local <- series$DateTime_local

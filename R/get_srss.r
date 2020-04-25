@@ -23,6 +23,11 @@ get_srss <- function(etuff, series){
 
   }
 
+  srss$day_interval <- interval(srss$sunrise, srss$sunset)
+
+  suppressWarnings(srss$night_interval <- interval(srss$sunset, srss$sunrise[2:nrow(srss)]))
+  srss$night_interval[nrow(srss)] <- NA
+
   return(srss)
 }
 
