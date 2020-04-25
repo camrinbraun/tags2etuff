@@ -4,7 +4,15 @@
 #' @param header is logical indicating whether or not the target etuff_file has a header. This will nearly always be TRUE (default).
 #' @param metaTypes is a dataframe that describes the appropriate inventory of metadata vocabulary. Default is NULL in which this table is read from Github.
 
-write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE){
+write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE,...){
+
+
+  args <- list(...)
+  if ('obsTypes' %in% names(args)){
+    obsTypes <- args$obsTypes
+  } else{
+    obsTypes <- NULL
+  }
 
   if (class(etuff) != 'etuff') stop('Input etuff object must be of class etuff.')
   if (is.null(meta_row)) meta_row <- etuff$meta
@@ -31,10 +39,24 @@ write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE){
   etuff$DateTime <- format(etuff$DateTime, '%Y-%m-%d %H:%M:%S', tz='UTC')
   etuff <- rbind(etuff, bins)
 
+  if (is.null(obsTypes)){
+    # try to get it from github
+    print('Getting obsTypes...')
+    url <- "https://raw.githubusercontent.com/camrinbraun/tagbase/master/eTUFF-ObservationTypes.csv"
+    obsTypes <- try(read.csv(text=RCurl::getURL(url)), TRUE)
+
+    # if that doesnt work, kill the funciton
+    if (class(obsTypes) == 'try-error') stop(paste('obsTypes not specified in function call and unable to automatically download it from github at', url, sep=' '))
+
+  }
+
+  etuff <- merge(x = etuff, y = obsTypes[ , c('VariableID', 'VariableName', 'VariableUnits')], by = "VariableName", all.x=TRUE)
+  etuff <- etuff[,c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')]
+
   ## write the output
   build_meta_head(meta_row = meta_row, filename = etuff_file, write_hdr = T)
   write.table(etuff, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
 
-  print(paste('Output eTUFF file written to ', etuff_file, '.', sep=''))
+  print(paste('Adding data to eTUFF file ', etuff_file, '.', sep=''))
 
 }
