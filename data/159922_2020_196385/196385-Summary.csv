@@ -1,2 +1,0 @@
-DeployID,Ptt,Instr,SW,PercentDecoded,Passes,PercentArgosLoc,MsgPerPass,DS,DI,MinPower,AvgPower,MaxPower,MinInterval,EarliestXmitTime,LatestXmitTime,XmitDays,EarliestDataTime,LatestDataTime,DataDays,ReleaseDate,ReleaseType,DeployDate
-196385,196385,MiniPAT,2.04w,73,470,91,7,3302,,,,,59,02:30:22 03-Feb-2020,20:11:49 19-Feb-2020,17,10:00:00 11-Jan-2020,16:08:45 05-Feb-2020,25,01:00:00 03-Feb-2020,Premature,10:11:00 11-Jan-2020

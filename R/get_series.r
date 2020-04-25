@@ -26,6 +26,8 @@ get_series <- function(etuff, temp_res = NULL, what_tz = NULL){
     series <- series[which(!is.na(series$DateTime)),]
   }
 
+  series$depth <- as.numeric(series$depth)
+  series$temperature <- as.numeric(series$temperature)
 
 
   if (length(what_tz) > 1){

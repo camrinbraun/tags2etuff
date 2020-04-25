@@ -21,7 +21,9 @@ get_pdt <- function(etuff){
 
   pdt <- pdt[,c('DateTime','PdtDepth','PdtTempMax','PdtTempMin')]
   row.names(pdt) <- NULL
-
+  pdt$PdtDepth <- as.numeric(pdt$PdtDepth)
+  pdt$PdtTempMax <- as.numeric(pdt$PdtTempMax)
+  pdt$PdtTempMin <- as.numeric(pdt$PdtTempMin)
 
   pdt <- pdt[order(pdt$DateTime, pdt$PdtDepth),]
 

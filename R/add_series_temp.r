@@ -27,15 +27,16 @@ add_series_temp <- function(series, pdt = NULL, pdt_interp = NULL, flag = TRUE){
   pdt$date <- pdt$DateTime
 
   ## this is a hack of an old function that works well, so fudge a few vars to match that functions requirements
-  series$day <- format(series$DateTime, '%d-%b-%Y')
-  series$date <- series$DateTime
-  series$doy <- lubridate::yday(series$DateTime)
+  series$day <- format(series$DateTime_local, '%d-%b-%Y')
+  series$date <- series$DateTime_local
+  series$doy <- lubridate::yday(series$DateTime_local)
   start_NAs <- length(which(is.na(series$temperature)))
   series_df <- getSeriesTemp(series, pdt, loess = pdt_interp, flag = flag)
 
   idx <- which(is.na(series$temperature))
   series$temperature[idx] <- series_df$temperature[idx]
-  series <- series[,c('DateTime','depth','temperature')]
+  name_idx <- which(names(series) %in% c('DateTime_local','DateTime','depth','temperature'))
+  series <- series[,name_idx]
   end_NAs <- length(which(is.na(series$temperature)))
 
   print(paste('Series data started with ', start_NAs, ' NAs and ended with ', end_NAs, ' NAs.', sep=''))

@@ -32,7 +32,7 @@ Note the master metadata spreadsheet currently lives in a private repo on Github
 ```{r, cache=T}
 
 ## tell it where your data lives
-dir <- './inst/extdata/159922_2020_196385/'
+data_dir <- './inst/extdata/159922_2020_196385/'
 
 ## load all tag metadata master sheet
 meta <- read.table('../nip_drake/RawData/all_tag_meta.csv', sep=',', header=T, blank.lines.skip = F, skip=0, stringsAsFactors = F)
@@ -43,7 +43,7 @@ meta$time_coverage_end <- as.POSIXct(meta$time_coverage_end, tz='UTC')
 idx <- which(meta$instrument_name == '159922_2020_196385')
 meta_row <- meta[idx,]
 
-etuff <- tag_to_etuff(dir, meta_row, gpe3=TRUE)
+etuff <- tag_to_etuff(data_dir, meta_row, gpe3 = TRUE)
 
 ```
 
@@ -91,7 +91,7 @@ If the above is all good, write the header and add the data. This is a two step 
 ```{r}
 
 ## check the meta hdr
-etuff_file <- paste(dir, etuff$meta$instrument_name, '_eTUFF.txt', sep='')
+etuff_file <- paste(data_dir, etuff$meta$instrument_name, '_eTUFF.txt', sep='')
 
 write_etuff(etuff, etuff_file, meta_row = etuff$meta)
 
@@ -103,7 +103,7 @@ Congrats, you now have a standardized, self-contained tag data file that can ess
 
 Start by just reading the eTUFF file we just created
 ```{r}
-etuff_file <- './data/159922_2020_196385/159922_2020_196385_eTUFF_hdr.txt'
+etuff_file <- './inst/extdata/159922_2020_196385/159922_2020_196385_eTUFF.txt'
 
 etuff <- read_etuff(etuff_file)
 

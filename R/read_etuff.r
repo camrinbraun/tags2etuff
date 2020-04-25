@@ -72,9 +72,14 @@ read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
 
   ## read etuff data
   if (!is.null(hdr)){
-    df <- read.table(etuff_file, sep = ',', header = T, skip = hdr$skip)
+    # figure out how many hdr lines to skip when reading the data
+    x <- scan(etuff_file, what = character(), sep=',')
+    skipLines <- grep('DateTime', x) - 1
+
+    df <- data.table::fread(etuff_file, sep=',', header = T, skip = skipLines)
+
   } else{
-    df <- read.table(etuff_file, sep = ',', header = T, skip = 0)
+    df <- data.table::fread(etuff_file, sep=',', header = T, skip = 0)
   }
 
   df <- df %>% dplyr::select(-c(VariableID, VariableUnits)) %>% spread(VariableName, VariableValue)

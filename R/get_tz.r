@@ -8,6 +8,8 @@ get_tz <- function(etuff, what_tz = NULL){
   if ('latitude' %in% names(df) & 'longitude' %in% names(df)){
     locs <- df[,c('DateTime','latitude','longitude')]
     locs <- locs[which(!is.na(locs$DateTime) & !is.na(locs$latitude) & !is.na(locs$longitude)),]
+    locs$longitude <- as.numeric(locs$longitude)
+    locs$latitude <- as.numeric(locs$latitude)
 
   }
 

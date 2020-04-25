@@ -6,13 +6,16 @@ get_track <- function(etuff, what_tz = NULL){
 
   if (class(etuff) != 'etuff') stop('Input object must be of class etuff.')
 
-  meta <- etuff$meta; df <- etuff$etuff
+  meta <- etuff$meta; df <- data.frame(etuff$etuff)
 
   ## get and format track
   idx <- which(names(df) %in% c('DateTime','latitude','longitude','latitudeError','longitudeError','argosLC'))
   tr <- df[,idx]
   tr <- tr[which(!is.na(tr$DateTime)),]
   tr <- tr[which(!is.na(tr$latitude)),]
+
+  idx <- which(names(tr) %in% c('latitude','longitude','latitudeError','longitudeError'))
+  for (i in idx) tr[,i] <- as.numeric(tr[,i])
 
   ## deal with timezones
   if (is.null(what_tz)) what_tz <- get_tz(etuff, what_tz)
