@@ -1,6 +1,8 @@
 #' @param etuff_file is an etuff text file
 #' @param header is logical indicating whether or not the target etuff_file has a header. This will nearly always be TRUE (default).
 #' @param metaTypes is a dataframe that describes the appropriate inventory of metadata vocabulary. Default is NULL in which this table is read from Github.
+#' @importFrom data.table fread
+#'
 
 read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
 
