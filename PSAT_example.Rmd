@@ -137,20 +137,36 @@ series <- get_series(etuff, what_tz = 'Asia/Riyadh')
 You will also notice this creates a time series from tag to pop based on the detected temporal resolution of the series data (thresher example is 75 seconds). I think it's much better to have a regularized time series with a bunch of NAs than to just have those timestamps missing completely. This is also how we calculate, for example, how much series data we have versus what is missing (i.e. wasn't transmitted). And we can do some tricks like use the LOESS interpolated depth-temp info to fill in at least some of the missing temperature measurements in the series:
 
 ```{r, message=F, warning=F}
+## steal some temp values from the interpolated pdt
 series <- add_series_temp(series, pdt, pdt_interp)
+
+## add a day/night column to your series data based on local sunrise/sunset times
+series$dn <- add_daynight(series, etuff)
+
+## you can also get your own df of sunrise and sunset times if you care (this is happening under the hood in add_daynight above) 
+srss <- get_srss(etuff, series)
+
+
 ```
 
 ```{r message=F, warning=F}
-ggplot(series, aes(x=DateTime, y=depth * -1, colour=temperature)) + geom_point() + ylim(-650,0)
+
+srss <- srss[which(srss$DateTime < max(series$DateTime_local)),]
+ggplot(srss) + geom_rect(aes(xmin=sunrise, xmax=sunset, ymin=-650, ymax=0), alpha=0.25, colour='grey') +
+  geom_point(data = series, aes(x=DateTime, y=depth * -1, colour=temperature)) + ylim(-650,0)
+
 ```
+
+
+This will get the track from the etuff file unless the fish was double-tagged AND thus that tag has its own etuff file. Working on how to deal with that
+```{r, eval=T, message=F, warning=F}
+track <- get_track(etuff)
+
+```
+
 
 
 ## Still working on these
-
-This will get the track, regardless of its type or source
-```{r, eval=F, message=F, warning=F}
-track <- get_track(etuff)
-```
 
 Unless metadata suggests the fish was double-tagged, in which case, go get that instead:
 ```{r, eval=F, message=F, warning=F}
@@ -158,10 +174,7 @@ Unless metadata suggests the fish was double-tagged, in which case, go get that 
 ```
 
 
-Also need a standard sunrise/set function based on the track
-
-
-And we need some functionality for the standard plots including:
+And we need some functionality for the standard plots (but likely move these to analyzePSAT) including:
   * TAD/TAT frequency barplots (with a day/night option)
   * series data colored by temp
   * interpolated PDT
