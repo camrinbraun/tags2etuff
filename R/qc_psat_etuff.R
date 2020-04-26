@@ -22,8 +22,10 @@ qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
     etuff$DateTime <- as.POSIXct(etuff$DateTime, tz='UTC')
   }
 
-  bins <- reshape2::melt(bins)#, id.vars=c('DateTime'))
-  names(bins) <- c('VariableName','VariableValue')
+  if (!is.null(bins)){
+    bins <- reshape2::melt(bins)#, id.vars=c('DateTime'))
+    names(bins) <- c('VariableName','VariableValue')
+  }
 
 
   #==========
@@ -33,45 +35,53 @@ qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
   ## simple depth light and sst plots
 
   # tad/tat plots
-  tad_bins <- bins[grep('HistDepthBin', bins$VariableName),]
-  if (nrow(tad_bins) == 0){
+  if (!is.null(bins)){
+    tad_bins <- bins[grep('HistDepthBin', bins$VariableName),]
+
+    if (nrow(tad_bins) == 0){
+      tad.plot <- ggplot() + geom_blank(aes(1,1)) +
+        cowplot::theme_nothing()
+      tat.plot <- ggplot() + geom_blank(aes(1,1)) +
+        cowplot::theme_nothing()
+    } else{
+
+      tad <- etuff[grep('TimeAtDepth', etuff$VariableName),]
+      tad <- tad[which(!is.na(tad$VariableValue)),]
+      tad$binMin <- NA; tad$binMax <- NA
+      binNames <- unique(tad$VariableName)
+      binNames <- substr(binNames, 15, 17)
+      for (ii in 1:length(binNames)){
+        tad$binMin[grep(paste(binNames[ii]), tad$VariableName)] <- unique(tad_bins$VariableValue[grep(paste('Min', binNames[ii], sep=''), tad_bins$VariableName)])
+        tad$binMax[grep(paste(binNames[ii]), tad$VariableName)] <- unique(tad_bins$VariableValue[grep(paste('Max', binNames[ii], sep=''), tad_bins$VariableName)])
+      }
+
+      tad$VariableValue <- as.numeric(tad$VariableValue)
+      tad$binMax <- as.numeric(tad$binMax)
+      tad.plot <- levelplot(tad$VariableValue ~ tad$DateTime * tad$binMax, col.regions = jet.colors, ylim=c(1005,0),
+                            xlab='', ylab='Depth (m)')#, main='Time-at-depth (%)')
+
+      tat_bins <- bins[grep('HistTempBin', bins$VariableName),]
+      tat <- etuff[grep('TimeAtTemp', etuff$VariableName),]
+      tat <- tat[which(!is.na(tat$VariableValue)),]
+      tat$binMin <- NA; tat$binMax <- NA
+      binNames <- unique(tat$VariableName)
+      binNames <- substr(binNames, 14, 16)
+      for (ii in 1:length(binNames)){
+        tat$binMin[grep(paste(binNames[ii]), tat$VariableName)] <- unique(tat_bins$VariableValue[grep(paste('Min', binNames[ii], sep=''), tat_bins$VariableName)])
+        tat$binMax[grep(paste(binNames[ii]), tat$VariableName)] <- unique(tat_bins$VariableValue[grep(paste('Max', binNames[ii], sep=''), tat_bins$VariableName)])
+      }
+
+      tat$VariableValue <- as.numeric(tat$VariableValue)
+      tat$binMax <- as.numeric(tat$binMax)
+      tat.plot <- levelplot(tat$VariableValue ~ tat$DateTime * tat$binMax, col.regions = jet.colors, #ylim=c(1005,0),
+                            xlab='', ylab='Temperature (C)')#, main='Time-at-temperature (%)')
+
+    }
+  } else{
     tad.plot <- ggplot() + geom_blank(aes(1,1)) +
       cowplot::theme_nothing()
     tat.plot <- ggplot() + geom_blank(aes(1,1)) +
       cowplot::theme_nothing()
-  } else{
-
-    tad <- etuff[grep('TimeAtDepth', etuff$VariableName),]
-    tad <- tad[which(!is.na(tad$VariableValue)),]
-    tad$binMin <- NA; tad$binMax <- NA
-    binNames <- unique(tad$VariableName)
-    binNames <- substr(binNames, 15, 17)
-    for (ii in 1:length(binNames)){
-      tad$binMin[grep(paste(binNames[ii]), tad$VariableName)] <- unique(tad_bins$VariableValue[grep(paste('Min', binNames[ii], sep=''), tad_bins$VariableName)])
-      tad$binMax[grep(paste(binNames[ii]), tad$VariableName)] <- unique(tad_bins$VariableValue[grep(paste('Max', binNames[ii], sep=''), tad_bins$VariableName)])
-    }
-
-    tad$VariableValue <- as.numeric(tad$VariableValue)
-    tad$binMax <- as.numeric(tad$binMax)
-    tad.plot <- levelplot(tad$VariableValue ~ tad$DateTime * tad$binMax, col.regions = jet.colors, ylim=c(1005,0),
-                          xlab='', ylab='Depth (m)')#, main='Time-at-depth (%)')
-
-    tat_bins <- bins[grep('HistTempBin', bins$VariableName),]
-    tat <- etuff[grep('TimeAtTemp', etuff$VariableName),]
-    tat <- tat[which(!is.na(tat$VariableValue)),]
-    tat$binMin <- NA; tat$binMax <- NA
-    binNames <- unique(tat$VariableName)
-    binNames <- substr(binNames, 14, 16)
-    for (ii in 1:length(binNames)){
-      tat$binMin[grep(paste(binNames[ii]), tat$VariableName)] <- unique(tat_bins$VariableValue[grep(paste('Min', binNames[ii], sep=''), tat_bins$VariableName)])
-      tat$binMax[grep(paste(binNames[ii]), tat$VariableName)] <- unique(tat_bins$VariableValue[grep(paste('Max', binNames[ii], sep=''), tat_bins$VariableName)])
-    }
-
-    tat$VariableValue <- as.numeric(tat$VariableValue)
-    tat$binMax <- as.numeric(tat$binMax)
-    tat.plot <- levelplot(tat$VariableValue ~ tat$DateTime * tat$binMax, col.regions = jet.colors, #ylim=c(1005,0),
-                          xlab='', ylab='Temperature (C)')#, main='Time-at-temperature (%)')
-
   }
 
   ## get SST
