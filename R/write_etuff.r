@@ -21,8 +21,10 @@ write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE,..
   if (check_meta) build_meta_head(meta_row = meta_row, write_hdr = F)
 
   ## reshape bins
-  bins <- reshape2::melt(etuff$bins)#, id.vars=c('DateTime'))
-  names(bins) <- c('VariableName','VariableValue')
+  if (!is.null(etuff$bins)){
+    bins <- reshape2::melt(etuff$bins)#, id.vars=c('DateTime'))
+    names(bins) <- c('VariableName','VariableValue')
+  }
 
   ## reshape etuff
   etuff <- reshape2::melt(etuff$etuff, id.vars=c('DateTime'))
@@ -34,10 +36,15 @@ write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE,..
   }
 
   ## prep for and rbind
-  bins$DateTime <- ''
-  bins <- bins[,c('DateTime','VariableName','VariableValue')]
-  etuff$DateTime <- format(etuff$DateTime, '%Y-%m-%d %H:%M:%S', tz='UTC')
-  etuff <- rbind(etuff, bins)
+  if (!is.null(etuff$bins)){
+    bins$DateTime <- ''
+    bins <- bins[,c('DateTime','VariableName','VariableValue')]
+    etuff$DateTime <- format(etuff$DateTime, '%Y-%m-%d %H:%M:%S', tz='UTC')
+    etuff <- rbind(etuff, bins)
+  } else{
+    etuff$DateTime <- format(etuff$DateTime, '%Y-%m-%d %H:%M:%S', tz='UTC')
+
+  }
 
   if (is.null(obsTypes)){
     # try to get it from github
