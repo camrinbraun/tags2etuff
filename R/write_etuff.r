@@ -55,7 +55,8 @@ write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE,..
 
   ## write the output
   build_meta_head(meta_row = meta_row, filename = etuff_file, write_hdr = T)
-  write.table(etuff, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
+  #write.table(etuff, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
+  data.table::fwrite(etuff, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
 
   print(paste('Adding data to eTUFF file ', etuff_file, '.', sep=''))
 
