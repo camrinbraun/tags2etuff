@@ -1002,7 +1002,12 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
 
   if(exists('write_direct')){
     if (write_direct == TRUE & exists('etuff_file')){
+      ## write the output
+      build_meta_head(meta_row = meta_row, filename = etuff_file, write_hdr = T)
+      #write.table(etuff, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
       data.table::fwrite(etuff, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
+
+      print(paste('Adding data to eTUFF file ', etuff_file, '.', sep=''))
 
     } else{
       stop('Must specify etuff_file if write_direct = TRUE.')
