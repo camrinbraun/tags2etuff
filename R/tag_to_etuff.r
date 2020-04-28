@@ -468,8 +468,8 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       print('Getting Archival data...')
 
       # if series exists we load it
-      arch <- data.frame(data.table::fread(fList[fidx], sep=',', header = T))#, skip = skipLines)
-      #arch <- read.table(fList[fidx], sep=',', header=T, skip = skipLines)
+      arch <- data.frame(data.table::fread(fList[fidx], sep=',', header = T, stringsAsFactors = F, fill=TRUE))#, skip = skipLines)
+      #arch <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F, stringsAsFactors = F)#, skip = skipLines)
 
       # organize arch.new for flatfile format
       idx <- c(grep('time', names(arch), ignore.case = T),
@@ -1005,7 +1005,8 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       ## write the output
       build_meta_head(meta_row = meta_row, filename = etuff_file, write_hdr = T)
       #write.table(etuff, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
-      data.table::fwrite(etuff, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
+      print(head(returnData))
+      data.table::fwrite(returnData, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
 
       print(paste('Adding data to eTUFF file ', etuff_file, '.', sep=''))
 
