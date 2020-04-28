@@ -35,6 +35,8 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   args <- list(...)
   if ('fName' %in% names(args)) fName <- args$fName
   if ('customCols' %in% names(args)) customCols <- args$customCols
+  if ('write_direct' %in% names(args)) write_direct <- args$write_direct
+  if ('etuff_file' %in% names(args)) etuff_file <- args$etuff_file
 
   if ('manufacturer' %in% names(args)){
     manufacturer <- args$manufacturer
@@ -109,31 +111,32 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   if (exists('customCols')){
     print('Using the custom columns specified in customCols argument. This is an experimental feature and is not well tested.')
 
-    if (is.null(fName)) stop('fName must be specified when using customColsz. This is the file name of interest.')
+    #if (is.null(fName)) stop('fName must be specified when using customColsz. This is the file name of interest.')
 
-    dat <- read.table(paste(dir, fName, sep=''), sep=',', header=T, blank.lines.skip = F)
+    #dat <- read.table(paste(dir, fName, sep=''), sep=',', header=T, blank.lines.skip = F)
 
-    print(customCols)
-    print(dat[1,])
+    #print(customCols)
+    #print(dat[1,])
 
     warning('Defining column names using customCols as specified. These MUST exactly match observation types from the obsTypes set!')
 
-    names(dat) <- customCols
-    dat <- dat[which(dat$datetime != ''),]
+    #names(dat) <- customCols
+    #dat <- dat[which(dat$datetime != ''),]
+    dat <- customCols
 
-    dat$datetime <- testDates(dat$datetime)
+    #dat$datetime <- testDates(dat$datetime)
     dt.idx <- which(dat$date < dates[1] | dat$date > dates[2])
     if (length(dt.idx) > 0){
       warning('data in input dataset that is outside the bounds of specified start/end dates.')
       dat <- dat[-dt.idx,]
     }
 
-    dat <- dat[which(dat$argosLC != 'Z'),]
-    dat <- reshape2::melt(dat, id.vars=c('datetime'), measure.vars = customCols[-grep('date', customCols)])
+    #dat <- dat[which(dat$argosLC != 'Z'),]
+    dat <- reshape2::melt(dat, id.vars=c('DateTime'), measure.vars = names(dat)[-grep('DateTime', names(dat))])
     dat$VariableName <- dat$variable
 
     dat <- merge(x = dat, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
-    dat <- dat[,c('datetime','VariableID','value','VariableName','VariableUnits')]
+    dat <- dat[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
     names(dat) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
     dat <- dat[order(dat$DateTime, dat$VariableID),]
     dat$DateTime <- as.POSIXct(dat$DateTime, tz='UTC')
@@ -465,16 +468,27 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       print('Getting Archival data...')
 
       # if series exists we load it
-      arch <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
-      arch$dt <- as.POSIXct(arch$Time, format=HMMoce::findDateFormat(arch$Time), tz='UTC')
-      arch <- arch[which(arch$dt >= dates[1] & arch$dt <= dates[2]),]
+      arch <- data.frame(data.table::fread(fList[fidx], sep=',', header = T, stringsAsFactors = F, fill=TRUE))#, skip = skipLines)
+      #arch <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F, stringsAsFactors = F)#, skip = skipLines)
 
       # organize arch.new for flatfile format
-      arch.new <- subset(arch, select=-c(One.Minute.Light.Level, Smoothed.Light.Level))
+      idx <- c(grep('time', names(arch), ignore.case = T),
+               grep('depth', names(arch), ignore.case = T),
+               grep('temp', names(arch), ignore.case = T),
+               grep('light', names(arch), ignore.case = T))
+      drop_idx <- c(grep('one', names(arch), ignore.case = T),
+                    grep('smooth', names(arch), ignore.case = T))
+      idx <- idx[-which(idx %in% drop_idx)]
+      arch.new <- arch[,idx]
+      arch$dt <- as.POSIXct(arch$Time, format=HMMoce::findDateFormat(arch$Time), tz='UTC')
+      arch.new <- arch[which(arch$dt >= dates[1] & arch$dt <= dates[2]),]
+
+      #arch <- arch[which(names(arch) %in% c('Time','Depth','Temperature','Light Level'))]
+      #arch.new <- subset(arch, select=-c(One.Minute.Light.Level, Smoothed.Light.Level))
       nms <- names(arch.new)
-      nms[grep('Depth', nms)] <- 'depth'
-      nms[grep('Temp', nms)] <- 'temperature'
-      nms[grep('Light.Level', nms)] <- 'light'
+      nms[grep('Depth', nms, ignore.case = T)] <- 'depth'
+      nms[grep('Temp', nms, ignore.case = T)] <- 'temperature'
+      nms[grep('Light', nms, ignore.case = T)] <- 'light'
       names(arch.new) <- nms
       # summarize with melt
       arch.new <- reshape2::melt(arch.new, id.vars=c('dt'), measure.vars = c('depth','temperature','light'))
@@ -896,7 +910,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       #for (zz in 1:length(tad.dates)){
       histo.new <- rbind(histo.new, data.frame(DateTime = NA, VariableID = hdb$VariableID,
                                                VariableValue = hdb$Value, VariableName = hdb$VariableName, VariableUnits = 'meter'))
-     #}
+      #}
 
 
       histo.new <- histo.new[order(histo.new$DateTime, histo.new$VariableID),]
@@ -984,6 +998,22 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   ## convert to char and fill NAs with blanks for dealing with TAD/TAT bins
   returnData$DateTime <- as.character(returnData$DateTime)
   returnData$DateTime[which(is.na(returnData$DateTime))] <- ''
+
+
+  if(exists('write_direct')){
+    if (write_direct == TRUE & exists('etuff_file')){
+      ## write the output
+      build_meta_head(meta_row = meta_row, filename = etuff_file, write_hdr = T)
+      #write.table(etuff, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
+      print(head(returnData))
+      data.table::fwrite(returnData, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
+
+      print(paste('Adding data to eTUFF file ', etuff_file, '.', sep=''))
+
+    } else{
+      stop('Must specify etuff_file if write_direct = TRUE.')
+    }
+  }
 
   ## output of class etuff
   df <- returnData %>% dplyr::select(-c(VariableID, VariableUnits)) %>% spread(VariableName, VariableValue)
