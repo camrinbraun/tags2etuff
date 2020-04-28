@@ -465,16 +465,27 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       print('Getting Archival data...')
 
       # if series exists we load it
-      arch <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
-      arch$dt <- as.POSIXct(arch$Time, format=HMMoce::findDateFormat(arch$Time), tz='UTC')
-      arch <- arch[which(arch$dt >= dates[1] & arch$dt <= dates[2]),]
+      arch <- data.frame(data.table::fread(fList[fidx], sep=',', header = T))#, skip = skipLines)
+      #arch <- read.table(fList[fidx], sep=',', header=T, skip = skipLines)
 
       # organize arch.new for flatfile format
-      arch.new <- subset(arch, select=-c(One.Minute.Light.Level, Smoothed.Light.Level))
+      idx <- c(grep('time', names(arch), ignore.case = T),
+               grep('depth', names(arch), ignore.case = T),
+               grep('temp', names(arch), ignore.case = T),
+               grep('light', names(arch), ignore.case = T))
+      drop_idx <- c(grep('one', names(arch), ignore.case = T),
+                    grep('smooth', names(arch), ignore.case = T))
+      idx <- idx[-which(idx %in% drop_idx)]
+      arch.new <- arch[,idx]
+      arch$dt <- as.POSIXct(arch$Time, format=HMMoce::findDateFormat(arch$Time), tz='UTC')
+      arch.new <- arch[which(arch$dt >= dates[1] & arch$dt <= dates[2]),]
+
+      #arch <- arch[which(names(arch) %in% c('Time','Depth','Temperature','Light Level'))]
+      #arch.new <- subset(arch, select=-c(One.Minute.Light.Level, Smoothed.Light.Level))
       nms <- names(arch.new)
-      nms[grep('Depth', nms)] <- 'depth'
-      nms[grep('Temp', nms)] <- 'temperature'
-      nms[grep('Light.Level', nms)] <- 'light'
+      nms[grep('Depth', nms, ignore.case = T)] <- 'depth'
+      nms[grep('Temp', nms, ignore.case = T)] <- 'temperature'
+      nms[grep('Light', nms, ignore.case = T)] <- 'light'
       names(arch.new) <- nms
       # summarize with melt
       arch.new <- reshape2::melt(arch.new, id.vars=c('dt'), measure.vars = c('depth','temperature','light'))
@@ -896,7 +907,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       #for (zz in 1:length(tad.dates)){
       histo.new <- rbind(histo.new, data.frame(DateTime = NA, VariableID = hdb$VariableID,
                                                VariableValue = hdb$Value, VariableName = hdb$VariableName, VariableUnits = 'meter'))
-     #}
+      #}
 
 
       histo.new <- histo.new[order(histo.new$DateTime, histo.new$VariableID),]
@@ -984,6 +995,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   ## convert to char and fill NAs with blanks for dealing with TAD/TAT bins
   returnData$DateTime <- as.character(returnData$DateTime)
   returnData$DateTime[which(is.na(returnData$DateTime))] <- ''
+
 
   ## output of class etuff
   df <- returnData %>% dplyr::select(-c(VariableID, VariableUnits)) %>% spread(VariableName, VariableValue)
