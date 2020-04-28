@@ -111,31 +111,32 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   if (exists('customCols')){
     print('Using the custom columns specified in customCols argument. This is an experimental feature and is not well tested.')
 
-    if (is.null(fName)) stop('fName must be specified when using customColsz. This is the file name of interest.')
+    #if (is.null(fName)) stop('fName must be specified when using customColsz. This is the file name of interest.')
 
-    dat <- read.table(paste(dir, fName, sep=''), sep=',', header=T, blank.lines.skip = F)
+    #dat <- read.table(paste(dir, fName, sep=''), sep=',', header=T, blank.lines.skip = F)
 
-    print(customCols)
-    print(dat[1,])
+    #print(customCols)
+    #print(dat[1,])
 
     warning('Defining column names using customCols as specified. These MUST exactly match observation types from the obsTypes set!')
 
-    names(dat) <- customCols
-    dat <- dat[which(dat$datetime != ''),]
+    #names(dat) <- customCols
+    #dat <- dat[which(dat$datetime != ''),]
+    dat <- customCols
 
-    dat$datetime <- testDates(dat$datetime)
+    #dat$datetime <- testDates(dat$datetime)
     dt.idx <- which(dat$date < dates[1] | dat$date > dates[2])
     if (length(dt.idx) > 0){
       warning('data in input dataset that is outside the bounds of specified start/end dates.')
       dat <- dat[-dt.idx,]
     }
 
-    dat <- dat[which(dat$argosLC != 'Z'),]
-    dat <- reshape2::melt(dat, id.vars=c('datetime'), measure.vars = customCols[-grep('date', customCols)])
+    #dat <- dat[which(dat$argosLC != 'Z'),]
+    dat <- reshape2::melt(dat, id.vars=c('DateTime'), measure.vars = names(dat)[-grep('DateTime', names(dat))])
     dat$VariableName <- dat$variable
 
     dat <- merge(x = dat, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
-    dat <- dat[,c('datetime','VariableID','value','VariableName','VariableUnits')]
+    dat <- dat[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
     names(dat) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
     dat <- dat[order(dat$DateTime, dat$VariableID),]
     dat$DateTime <- as.POSIXct(dat$DateTime, tz='UTC')
