@@ -35,6 +35,8 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   args <- list(...)
   if ('fName' %in% names(args)) fName <- args$fName
   if ('customCols' %in% names(args)) customCols <- args$customCols
+  if ('write_direct' %in% names(args)) write_direct <- args$write_direct
+  if ('etuff_file' %in% names(args)) etuff_file <- args$etuff_file
 
   if ('manufacturer' %in% names(args)){
     manufacturer <- args$manufacturer
@@ -996,6 +998,15 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   returnData$DateTime <- as.character(returnData$DateTime)
   returnData$DateTime[which(is.na(returnData$DateTime))] <- ''
 
+
+  if(exists('write_direct')){
+    if (write_direct == TRUE & exists('etuff_file')){
+      data.table::fwrite(etuff, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
+
+    } else{
+      stop('Must specify etuff_file if write_direct = TRUE.')
+    }
+  }
 
   ## output of class etuff
   df <- returnData %>% dplyr::select(-c(VariableID, VariableUnits)) %>% spread(VariableName, VariableValue)
