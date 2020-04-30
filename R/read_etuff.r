@@ -78,10 +78,10 @@ read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
     x <- scan(etuff_file, what = character(), sep=',')
     skipLines <- grep('DateTime', x) - 1
 
-    df <- data.table::fread(etuff_file, sep=',', header = T, skip = skipLines)
+    df <- data.frame(data.table::fread(etuff_file, sep=',', header = T, skip = skipLines))
 
   } else{
-    df <- data.table::fread(etuff_file, sep=',', header = T, skip = 0)
+    df <- data.frame(data.table::fread(etuff_file, sep=',', header = T, skip = 0))
   }
 
   df <- df %>% dplyr::select(-c(VariableID, VariableUnits)) %>% spread(VariableName, VariableValue)
