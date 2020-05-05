@@ -58,7 +58,7 @@ read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
         if (!is.na(as.POSIXct(hdr[,i], format = '%m/%d/%y', tz='UTC'))){
           hdr[,i] <- as.POSIXct(hdr[,i], format = '%m/%d/%y', tz='UTC')
         } else{
-          hdr[,i] <- as.POSIXct(hdr[,i], format = findDateFormat(hdr[,i]), tz='UTC')
+          hdr[,i] <- as.POSIXct(hdr[,i], format = '%Y-%m-%d', tz='UTC')
         }
 
         print(paste(old_hdr, ' has been parsed as ', hdr[,i], '. If this is incorrect, the auto-detection of the date format is wrong.', sep=''))
