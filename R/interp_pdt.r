@@ -14,6 +14,8 @@ interp_pdt <- function(pdt, span_x = 5, span_y = 150){
   ## here we use mid-point
   pdt$PdtTempMid <- (pdt$PdtTempMax - pdt$PdtTempMin) / 2 + pdt$PdtTempMin
 
+  pdt <- data.frame(pdt %>% filter(!is.na(PdtDepth)))
+
   # run the LOESS interp
   results <- grid2dloess(pdt$PdtTempMid, xgrid = pdt$doy, ygrid = pdt$PdtDepth,
                          span_x = span_x, span_y = span_y)

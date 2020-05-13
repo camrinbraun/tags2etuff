@@ -13,7 +13,7 @@ get_series <- function(etuff, temp_res = NULL, what_tz = NULL){
 
   ## if no temporal resolution is specified, try to detect it (this should nearly always work with a PSAT tag)
   if (is.null(temp_res)){
-    series <- df[,c('DateTime','depth','temperature')]
+    series <- df[,c(which(names(df) %in% c('DateTime','depth','temperature')))]
     series <- series[which(!is.na(series$DateTime)),]
     temp_res <- Mode(as.numeric(diff(series$DateTime)))
     print(paste('No temporal resolution specified. Mode of diff(timeseries) yielded ', temp_res, 'seconds.', sep=''))
@@ -22,12 +22,12 @@ get_series <- function(etuff, temp_res = NULL, what_tz = NULL){
   ## get and format series
   ## save a little time by checking here in case series has already been formatted, mostly for large archival tag records
   if (!exists('series')){
-    series <- df[,c('DateTime','depth','temperature')]
+    series <- df[,c(which(names(df) %in% c('DateTime','depth','temperature')))]
     series <- series[which(!is.na(series$DateTime)),]
   }
 
   series$depth <- as.numeric(series$depth)
-  series$temperature <- as.numeric(series$temperature)
+  if (any(names(series) %in% c('temperature'))) series$temperature <- as.numeric(series$temperature)
 
 
   if (length(what_tz) > 1){
@@ -37,9 +37,11 @@ get_series <- function(etuff, temp_res = NULL, what_tz = NULL){
   } else {
 
     ## setup output dates
-    start <- with_tz(meta$time_coverage_start, what_tz)
-    end <- with_tz(meta$time_coverage_end, what_tz)
-    dt_vec <- data.frame(DateTime_local = seq(start, end, by = temp_res))
+    start <- with_tz(meta$time_coverage_start, tz = what_tz)
+    #start <- lubridate::with_tz(start, tz=what_tz)
+    end <- with_tz(meta$time_coverage_end, tz = what_tz)
+    #end <- lubridate::with_tz(end, tz=what_tz)
+    dt_vec <- data.frame(DateTime_local = lubridate::with_tz(seq(start, end, by = temp_res), tz=what_tz))
 
     ## convert series to local tz
     series$DateTime_local <- with_tz(series$DateTime, tzone = what_tz)

@@ -10,6 +10,7 @@ get_tz <- function(etuff, what_tz = NULL){
     locs <- locs[which(!is.na(locs$DateTime) & !is.na(locs$latitude) & !is.na(locs$longitude)),]
     locs$longitude <- as.numeric(locs$longitude)
     locs$latitude <- as.numeric(locs$latitude)
+    locs <- locs[which(!is.na(locs$latitude)),]
 
   }
 

@@ -23,7 +23,7 @@ qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
   }
 
   if (!is.null(bins)){
-    bins <- reshape2::melt(bins)#, id.vars=c('DateTime'))
+    bins <- reshape2::melt(bins, measure.vars = c(1:ncol(bins)))#, id.vars=c('DateTime'))
     names(bins) <- c('VariableName','VariableValue')
   }
 

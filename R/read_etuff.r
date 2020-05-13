@@ -58,7 +58,7 @@ read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
         if (!is.na(as.POSIXct(hdr[,i], format = '%m/%d/%y', tz='UTC'))){
           hdr[,i] <- as.POSIXct(hdr[,i], format = '%m/%d/%y', tz='UTC')
         } else{
-          hdr[,i] <- as.POSIXct(hdr[,i], format = findDateFormat(hdr[,i]), tz='UTC')
+          hdr[,i] <- as.POSIXct(hdr[,i], format = '%Y-%m-%d', tz='UTC')
         }
 
         print(paste(old_hdr, ' has been parsed as ', hdr[,i], '. If this is incorrect, the auto-detection of the date format is wrong.', sep=''))
@@ -78,10 +78,10 @@ read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
     x <- scan(etuff_file, what = character(), sep=',')
     skipLines <- grep('DateTime', x) - 1
 
-    df <- data.table::fread(etuff_file, sep=',', header = T, skip = skipLines)
+    df <- data.frame(data.table::fread(etuff_file, sep=',', header = T, skip = skipLines))
 
   } else{
-    df <- data.table::fread(etuff_file, sep=',', header = T, skip = 0)
+    df <- data.frame(data.table::fread(etuff_file, sep=',', header = T, skip = 0))
   }
 
   df <- df %>% dplyr::select(-c(VariableID, VariableUnits)) %>% spread(VariableName, VariableValue)

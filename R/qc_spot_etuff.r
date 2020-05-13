@@ -10,13 +10,19 @@
 qc_spot_etuff <- function(etuff, meta_row, writePDF = FALSE, cutdates = FALSE){
 
   ## any where datetime and variablevalue are identical?
+  if (class(etuff) != 'etuff') stop('Input etuff object must be of class etuff.')
+
+  bins <- etuff$bins
+  meta <- etuff$meta
+  #etuff <- etuff$etuff
 
   ## spread etuff back to tidy format
-  df <- etuff %>% dplyr::select(-c(VariableID, VariableUnits)) %>% spread(VariableName, VariableValue)
+  #df <- etuff$etuff %>% dplyr::select(-c(VariableID, VariableUnits)) %>% spread(VariableName, VariableValue)
+  df <- etuff$etuff
   df$latitude <- as.numeric(df$latitude)
   df$longitude <- as.numeric(df$longitude)
-  df$DateTime <- as.POSIXct(df$DateTime, tz='UTC')
-
+  df <- df[which(!is.na(df$latitude)),]
+  #df$DateTime <- as.POSIXct(df$DateTime, tz='UTC')
 
 
   xl <- c(min(min(df$longitude), min(meta_row$geospatial_lon_start), min(meta_row$geospatial_lon_end)),

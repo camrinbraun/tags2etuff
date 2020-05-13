@@ -471,32 +471,53 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       arch <- data.frame(data.table::fread(fList[fidx], sep=',', header = T, stringsAsFactors = F, fill=TRUE))#, skip = skipLines)
       #arch <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F, stringsAsFactors = F)#, skip = skipLines)
 
+      nms <- names(arch)
+      ## for temp start with exact "temperature" then "external.temperature" then "recorder.temp"
+      temp_col <- grep('^Temperature$', nms)
+      if (length(temp_col) != 1){
+        temp_col <- grep('^External.Temperature$', nms)
+        if (length(temp_col) != 1){
+          temp_col <- grep('^Recorder.Temp$', nms)
+        }
+      }
+
+      ## for depth use exact "Depth"
+      depth_col <- grep('^Depth$', nms)
+
+      ## for light use "Light.level"
+      light_col <- grep('^Light.Level$', nms)
+
+      ## for light use "Time"
+      time_col <- grep('^Time$', nms)
+
       # organize arch.new for flatfile format
-      idx <- c(grep('time', names(arch), ignore.case = T),
-               grep('depth', names(arch), ignore.case = T),
-               grep('temp', names(arch), ignore.case = T),
-               grep('light', names(arch), ignore.case = T))
-      drop_idx <- c(grep('one', names(arch), ignore.case = T),
-                    grep('smooth', names(arch), ignore.case = T))
-      idx <- idx[-which(idx %in% drop_idx)]
-      arch.new <- arch[,idx]
-      arch$dt <- as.POSIXct(arch$Time, format=HMMoce::findDateFormat(arch$Time), tz='UTC')
-      arch.new <- arch[which(arch$dt >= dates[1] & arch$dt <= dates[2]),]
+      #idx <- c(grep('time', names(arch), ignore.case = T),
+      #         grep('depth', names(arch), ignore.case = T),
+      #         grep('temp', names(arch), ignore.case = T),
+      #         grep('light', names(arch), ignore.case = T))
+      #drop_idx <- c(grep('one', names(arch), ignore.case = T),
+      #              grep('internal', names(arch), ignore.case = T),
+      #              grep('smooth', names(arch), ignore.case = T))
+      #idx <- idx[-which(idx %in% drop_idx)]
+      arch <- arch[,c(time_col, depth_col, temp_col, light_col)]
+      names(arch) <- c('DateTime','depth','temperature','light')
+      arch$DateTime <- as.POSIXct(arch$DateTime, format=HMMoce::findDateFormat(arch$DateTime), tz='UTC')
+      arch.new <- arch[which(arch$DateTime >= dates[1] & arch$DateTime <= dates[2]),]
 
       #arch <- arch[which(names(arch) %in% c('Time','Depth','Temperature','Light Level'))]
       #arch.new <- subset(arch, select=-c(One.Minute.Light.Level, Smoothed.Light.Level))
-      nms <- names(arch.new)
-      nms[grep('Depth', nms, ignore.case = T)] <- 'depth'
-      nms[grep('Temp', nms, ignore.case = T)] <- 'temperature'
-      nms[grep('Light', nms, ignore.case = T)] <- 'light'
-      names(arch.new) <- nms
+      #nms <- names(arch.new)
+      #nms[grep('^Depth$', nms, ignore.case = T)] <- 'depth'
+      #nms[grep('Temp', nms, ignore.case = T)] <- 'temperature'
+      #nms[grep('Light', nms, ignore.case = T)] <- 'light'
+      #names(arch.new) <- nms
       # summarize with melt
-      arch.new <- reshape2::melt(arch.new, id.vars=c('dt'), measure.vars = c('depth','temperature','light'))
+      arch.new <- reshape2::melt(arch.new, id.vars=c('DateTime'), measure.vars = c('depth','temperature','light'))
       arch.new$VariableName <- arch.new$variable
 
       # merge with obs types and do some formatting
       arch.new <- merge(x = arch.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
-      arch.new <- arch.new[,c('dt','VariableID','value','VariableName','VariableUnits')]
+      arch.new <- arch.new[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
       names(arch.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
       arch.new <- arch.new[order(arch.new$DateTime, arch.new$VariableID),]
       arch.new <- arch.new[which(!is.na(arch.new$VariableValue)),]

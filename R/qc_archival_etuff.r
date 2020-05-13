@@ -64,8 +64,6 @@ qc_archival_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
       tad.plot <- levelplot(tad$VariableValue ~ tad$DateTime * tad$binMax, col.regions = jet.colors, ylim=c(1005,0),
                             xlab='', ylab='Depth (m)')#, main='Time-at-depth (%)')
 
-
-
       tat_bins <- bins[grep('HistTempBin', bins$VariableName),]
 
       tat <- etuff[,c('DateTime', names(etuff)[grep('TimeAtTemp', names(etuff))])]
@@ -118,13 +116,16 @@ qc_archival_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
   depth <- etuff[,c('DateTime', 'depth', 'temperature')]
   depth <- depth[seq(1, nrow(depth), by=50),]
 
+  light <- etuff[,c('DateTime', 'light')]
+  light <- light[seq(1, nrow(light), by=50),]
+
   ## Build plots
   p1 <- ggplot(depth, aes(x=DateTime, y=depth * -1, colour=temperature)) +
-    geom_point() + ylab('Depth (m)') #+
+    geom_point() + ylab('Depth (m)') + theme(legend.position = "none")
     #geom_path(data = etuff[which(etuff$VariableName == 'depthMax'),], aes(x=DateTime, y=as.numeric(VariableValue) * -1), colour='red') +
     #geom_path(data = etuff[which(etuff$VariableName == 'depthMin'),], aes(x=DateTime, y=as.numeric(VariableValue) * -1), colour='blue')
   p2 <- ggplot(data=sst, aes(x=DateTime, y = as.numeric(VariableValue))) + geom_path(colour = 'black') + ylab('SST (C)') + xlab('')
-  p3 <- ggplot(data=etuff[which(etuff$VariableName == 'light'),], aes(x=DateTime, y = as.numeric(VariableValue))) + geom_point(colour = 'black') + ylab('Light') + xlab('')
+  p3 <- ggplot(data=light, aes(x=DateTime, y = light)) + geom_point(colour = 'black') + ylab('Light') + xlab('')
 
   if (map){
     ## get world map data
