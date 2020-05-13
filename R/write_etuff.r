@@ -22,7 +22,7 @@ write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE,..
 
   ## reshape bins
   if (!is.null(etuff$bins)){
-    bins <- reshape2::melt(etuff$bins)#, id.vars=c('DateTime'))
+    bins <- reshape2::melt(etuff$bins, measure.vars = c(1:ncol(etuff$bins)))#, id.vars=c('DateTime'))
     names(bins) <- c('VariableName','VariableValue')
   }
 
