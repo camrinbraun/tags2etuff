@@ -1,4 +1,6 @@
-get_3d <- function(etuff, series = NULL,...){
+get_3d <- function(etuff, series = NULL, fG = TRUE,...){
+
+  args <- list(...)
 
   ## sort out the track
 
@@ -74,20 +76,21 @@ get_3d <- function(etuff, series = NULL,...){
 
     }
     track <- data.frame(plocs[,c('date','lat','lon')])
-    names(track) <- c('DateTime','latitude','longitude')
+    names(track) <- c('track_dt','latitude','longitude')
 
   } else{
-    track <- track[,c('DateTime','latitude','longitude')]
+    track <- track[,c('track_dt','latitude','longitude')]
 
   }
 
-  track_interval <- lubridate::interval(track$DateTime[1:(nrow(track)-1)], track$DateTime[2:(nrow(track))])
+  track_interval <- lubridate::interval(track$track_dt[1:(nrow(track)-1)], track$track_dt[2:(nrow(track))])
 
 
 
   ## sort out series
   if (is.null(series)) series <- get_series(etuff)
   series <- series[which(!is.na(series$DateTime)),]
+  nms <- names(series)
 
   idx <- lapply(series$DateTime, FUN=function(x){
     i <- which(x %within% track_interval)
@@ -105,7 +108,8 @@ get_3d <- function(etuff, series = NULL,...){
   track$idx <- 1:nrow(track)
   series <- merge(series, track, by='idx', all.x = TRUE)
   series$track_dt <- as.POSIXct(series$track_dt, origin='1970-01-01', tz='UTC')
-  series <- series[,which(!(names(series) %in% 'idx'))]
+  #series <- series[,which(!(names(series) %in% 'idx'))]
+  series <- series[,c(nms, 'track_dt','latitude','longitude')]
 
   return(series)
 }
