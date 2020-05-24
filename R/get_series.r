@@ -10,10 +10,16 @@ get_series <- function(etuff, temp_res = NULL, what_tz = NULL){
   meta <- etuff$meta; df <- etuff$etuff
 
   if (is.null(what_tz)) what_tz <- get_tz(etuff, what_tz)
+  if (length(what_tz) > 1){
+    what_tz <- Mode(what_tz)
+    warning('Multiple tz detected. Using Mode to auto-select one. Pre-specify a tz if you do not want this to happen.')
+  }
 
   ## if no temporal resolution is specified, try to detect it (this should nearly always work with a PSAT tag)
   if (is.null(temp_res)){
     series <- df[,c(which(names(df) %in% c('DateTime','depth','temperature')))]
+    if (class(series) != 'data.frame') return(series = NA)
+
     series <- series[which(!is.na(series$DateTime)),]
     temp_res <- Mode(as.numeric(diff(series$DateTime)))
     print(paste('No temporal resolution specified. Mode of diff(timeseries) yielded ', temp_res, 'seconds.', sep=''))
@@ -23,6 +29,7 @@ get_series <- function(etuff, temp_res = NULL, what_tz = NULL){
   ## save a little time by checking here in case series has already been formatted, mostly for large archival tag records
   if (!exists('series')){
     series <- df[,c(which(names(df) %in% c('DateTime','depth','temperature')))]
+    if (class(series) != 'data.frame') return(series = NA)
     series <- series[which(!is.na(series$DateTime)),]
   }
 

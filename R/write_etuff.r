@@ -24,6 +24,8 @@ write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE,..
   if (!is.null(etuff$bins)){
     bins <- reshape2::melt(etuff$bins, measure.vars = c(1:ncol(etuff$bins)))#, id.vars=c('DateTime'))
     names(bins) <- c('VariableName','VariableValue')
+  } else{
+    bins <- NULL
   }
 
   ## reshape etuff
@@ -36,7 +38,7 @@ write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE,..
   }
 
   ## prep for and rbind
-  if (!is.null(etuff$bins)){
+  if (!is.null(bins)){
     bins$DateTime <- ''
     bins <- bins[,c('DateTime','VariableName','VariableValue')]
     etuff$DateTime <- format(etuff$DateTime, '%Y-%m-%d %H:%M:%S', tz='UTC')
@@ -57,8 +59,13 @@ write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE,..
 
   }
 
+  etuff <- etuff[which(etuff$VariableName != 'id'),]
+
   etuff <- merge(x = etuff, y = obsTypes[ , c('VariableID', 'VariableName', 'VariableUnits')], by = "VariableName", all.x=TRUE)
   etuff <- etuff[,c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')]
+
+  ## drop those where TAD/TAT bin definitions are arbitrarily assigned timestamps
+  etuff <- etuff[-which(etuff$VariableID >= 301 & etuff$VariableID < 400 & etuff$DateTime != ''),]
 
   ## write the output
   build_meta_head(meta_row = meta_row, filename = etuff_file, write_hdr = T)

@@ -30,7 +30,7 @@ get_tz <- function(etuff, what_tz = NULL){
     #locs$day <- as.Date(locs$DateTime)
     #locs <- locs[!duplicated(locs$day),]
     what_tz <- lutz::tz_lookup_coords(lat = locs$latitude, lon = locs$longitude, method = "accurate")
-    for (i in 1:length(unique(what_tz))) print(paste('No time zone specified. Detecting and using the time zone(s) from the tracking data. Unique time zones applied to the dataset are: ', unique(what_tz)[i], '.', sep=''))
+    for (i in 1:length(unique(what_tz))) print(paste('No time zone specified. Detecting the time zone(s) from the tracking data: ', unique(what_tz)[i], '.', sep=''))
 
   }
 
