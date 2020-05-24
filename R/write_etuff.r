@@ -42,6 +42,7 @@ write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE,..
     bins$DateTime <- ''
     bins <- bins[,c('DateTime','VariableName','VariableValue')]
     etuff$DateTime <- format(etuff$DateTime, '%Y-%m-%d %H:%M:%S', tz='UTC')
+    etuff <- etuff[which(!(etuff$VariableName %in% unique(bins$VariableName))),]
     etuff <- rbind(etuff, bins)
   } else{
     etuff$DateTime <- format(etuff$DateTime, '%Y-%m-%d %H:%M:%S', tz='UTC')
@@ -65,7 +66,7 @@ write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE,..
   etuff <- etuff[,c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')]
 
   ## drop those where TAD/TAT bin definitions are arbitrarily assigned timestamps
-  etuff <- etuff[-which(etuff$VariableID >= 301 & etuff$VariableID < 400 & etuff$DateTime != ''),]
+  #etuff <- etuff[-which(etuff$VariableID >= 301 & etuff$VariableID <= 364 & etuff$DateTime != ''),]
 
   ## write the output
   build_meta_head(meta_row = meta_row, filename = etuff_file, write_hdr = T)
