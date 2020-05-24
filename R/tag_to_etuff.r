@@ -903,7 +903,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       idx <- grep('Max', hdb$VariableName)[1:length(tad.lim)]
       for (zz in idx){
         hdb$Value[zz] <- unlist(tad.lim[which(idx == zz)])
-        if (which(idx == zz) != 1) hdb$Value[zz - 1] <- unlist(tad.lim[which(idx == zz) - 1]) + 0.1
+        if (which(idx == zz) != 1 & !is.na(unlist(tad.lim[which(idx == zz)]))) hdb$Value[zz - 1] <- unlist(tad.lim[which(idx == zz) - 1]) + 0.1
       }
       hdb <- hdb[which(!is.na(hdb$Value)),]
 
@@ -914,7 +914,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       idx <- grep('Max', htb$VariableName)[1:length(tat.lim)]
       for (zz in idx){
         htb$Value[zz] <- unlist(tat.lim[which(idx == zz)])
-        if (which(idx == zz) != 1) htb$Value[zz - 1] <- unlist(tat.lim[which(idx == zz) - 1]) + 0.1
+        if (which(idx == zz) != 1 & !is.na(unlist(tat.lim[which(idx == zz)]))) htb$Value[zz - 1] <- unlist(tat.lim[which(idx == zz) - 1]) + 0.1
       }
       htb <- htb[which(!is.na(htb$Value)),]
 
