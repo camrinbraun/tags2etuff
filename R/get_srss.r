@@ -1,7 +1,5 @@
 
-get_srss <- function(etuff, series){
-
-  #if (is.null(series)) series <- get_series(etuff)
+get_srss <- function(etuff){
 
   tr <- get_track(etuff)
   tr$day <- as.Date(tr$DateTime)
