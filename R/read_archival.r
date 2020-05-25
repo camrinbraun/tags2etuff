@@ -106,7 +106,7 @@ read_archival <- function(etuff_file, header = TRUE, metaTypes = NULL){
   if (!exists('bins')) bins <- NULL
 
   etuff <- list(etuff = df, meta = hdr, bins = bins)
-  #class(etuff) <- 'etuff'
+  class(etuff) <- 'etuff_archival'
   return(etuff)
 
 }

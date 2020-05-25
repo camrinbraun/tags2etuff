@@ -2,15 +2,20 @@
 
 get_pdt <- function(etuff){
 
-  if (class(etuff) != 'etuff') stop('Input object must be of class etuff.')
+  if (class(etuff) != 'etuff' & class(etuff) != 'etuff_archival') stop('Input object must be of class etuff or etuff_archival.')
 
   meta <- etuff$meta; df <- etuff$etuff
 
-  idx <- grep('pdt', names(df), ignore.case = T)
-  if (length(idx) == 0) stop('No names in this eTUFF file correspond to PDT data.')
+  ## isolate the appropriate data
+  if (class(etuff) == 'etuff_archival'){
+    pdt <- archival_to_etuff(df, vars = c('pdt'))
+  } else{
+    idx <- grep('pdt', names(df), ignore.case = T)
+    if (length(idx) == 0) stop('No names in this eTUFF file correspond to PDT data.')
+    pdt <- df[,idx]
+    pdt <- cbind(DateTime = df$DateTime, pdt)
+  }
 
-  pdt <- df[,idx]
-  pdt <- cbind(DateTime = df$DateTime, pdt)
   pdt <- pdt[which(!is.na(pdt$DateTime) & !is.na(pdt$PdtDepth01) & pdt$PdtDepth01 != ''),]
   pdt$day <- as.Date(pdt$DateTime)
 

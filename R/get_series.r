@@ -5,7 +5,7 @@
 
 get_series <- function(etuff, temp_res = NULL, what_tz = NULL){
 
-  if (class(etuff) != 'etuff') stop('Input object must be of class etuff.')
+  if (class(etuff) != 'etuff' & class(etuff) != 'etuff_archival') stop('Input object must be of class etuff or etuff_archival.')
 
   meta <- etuff$meta; df <- etuff$etuff
 
