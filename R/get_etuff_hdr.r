@@ -4,7 +4,7 @@
 #'
 
 get_etuff_hdr <- function(etuff_file){
-  x <- scan(etuff_file, what = character(), sep=',')
+  x <- scan(etuff_file, what = character(), sep=',', nmax = 1000)
 
   # figure out how many hdr lines to skip when reading the data
   skipLines <- grep('DateTime', x) - 1
