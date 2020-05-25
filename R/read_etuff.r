@@ -75,7 +75,7 @@ read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
   ## read etuff data
   if (!is.null(hdr)){
     # figure out how many hdr lines to skip when reading the data
-    x <- scan(etuff_file, what = character(), sep=',')
+    x <- scan(etuff_file, what = character(), sep=',', nmax=1000)
     skipLines <- grep('DateTime', x) - 1
 
     df <- data.frame(data.table::fread(etuff_file, sep=',', header = T, skip = skipLines))
