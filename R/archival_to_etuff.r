@@ -9,7 +9,8 @@ archival_to_etuff <- function(archival, vars){
     return(archival)
   }
 
-  archival <- archival[unlist(idx),]
+  idx <- unique(unlist(idx))
+  archival <- archival[idx,]
   archival <- archival %>% dplyr::select(-c(id)) %>% spread(VariableName, VariableValue)
   archival <- archival[order(archival$DateTime),]
 
