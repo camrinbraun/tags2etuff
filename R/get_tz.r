@@ -27,12 +27,12 @@ get_tz <- function(etuff, what_tz = NULL){
 
     print(paste('Using input time zone for the entire dataset: ', what_tz, '.', sep=''))
 
-  } else if (is.null(what_tz) & (!('latitude' %in% names(df)) | !('longitude' %in% names(df)))){
+  } else if (is.null(what_tz) & (!exists('locs'))){
 
     what_tz <- lutz::tz_lookup_coords(lat = meta$geospatial_lat_start, lon = meta$geospatial_lon_start, method = "accurate")
     print(paste('No time zone specified and no track in input eTUFF. Time zone for the start location is being used: ', what_tz, sep=''))
 
-  } else if (is.null(what_tz) & ('latitude' %in% names(df) & 'longitude' %in% names(df))){
+  } else if (is.null(what_tz) & (exists('locs'))){
 
     #locs$day <- as.Date(locs$DateTime)
     #locs <- locs[!duplicated(locs$day),]
