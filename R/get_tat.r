@@ -3,15 +3,29 @@
 
 get_tat <- function(etuff){
 
-  if (class(etuff) != 'etuff') stop('Input object must be of class etuff.')
+  if (class(etuff) != 'etuff' & class(etuff) != 'etuff_archival') stop('Input object must be of class etuff or etuff_archival.')
 
   meta <- etuff$meta; df <- etuff$etuff
 
-  idx <- grep('timeattemp', names(df), ignore.case = T)
-  if (length(idx) == 0) stop('No names in this eTUFF file correspond to tad data.')
+  if (class(etuff) == 'etuff_archival'){
+    #idx <- grep('timeattemp', df$VariableName, ignore.case = T)
+    #if (length(idx) == 0) stop('No names in this eTUFF file correspond to tat data.')
 
-  tad <- df[,idx]
-  tad <- cbind(DateTime = df$DateTime, tad)
+    #tad <- df[idx,]
+   # tad <- tad %>% dplyr::select(-c(id)) %>% spread(VariableName, VariableValue)
+
+    tad <- archival_to_etuff(df, vars = c('timeattemp'))
+
+  } else{
+    idx <- grep('timeattemp', names(df), ignore.case = T)
+    if (length(idx) == 0) stop('No names in this eTUFF file correspond to tad data.')
+
+    tad <- df[,idx]
+    tad <- cbind(DateTime = df$DateTime, tad)
+
+  }
+
+
   row_idx <- apply(tad, 1, FUN=function(x) all(is.na(x[grep('timeattemp', names(tad), ignore.case = T)])))
   tad <- tad[which(!row_idx),]
   tad$day <- as.Date(tad$DateTime)

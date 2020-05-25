@@ -94,6 +94,7 @@ read_archival <- function(etuff_file, header = TRUE, metaTypes = NULL){
     bins <- df[which(df$DateTime == '' | is.na(df$DateTime)),]
     drop_idx <- which(apply(bins, 2, FUN=function(x) all(is.na(x) | x == '')))
     bins <- bins[,-drop_idx]
+    bins <- bins %>% spread(VariableName, VariableValue)
     df <- df[which(df$DateTime != ''),]
   }
 

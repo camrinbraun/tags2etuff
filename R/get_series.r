@@ -15,11 +15,17 @@ get_series <- function(etuff, temp_res = NULL, what_tz = NULL){
     warning('Multiple tz detected. Using Mode to auto-select one. Pre-specify a tz if you do not want this to happen.')
   }
 
+  ## isolate the appropriate data
+  if (class(etuff) == 'etuff_archival'){
+    series <- archival_to_etuff(df, vars = c('DateTime','depth','temperature'))
+  } else{
+    series <- df[,c(which(names(df) %in% c('DateTime','depth','temperature')))]
+  }
+
+  if (class(series) != 'data.frame') return(series = NA)
+
   ## if no temporal resolution is specified, try to detect it (this should nearly always work with a PSAT tag)
   if (is.null(temp_res)){
-    series <- df[,c(which(names(df) %in% c('DateTime','depth','temperature')))]
-    if (class(series) != 'data.frame') return(series = NA)
-
     series <- series[which(!is.na(series$DateTime)),]
     temp_res <- Mode(as.numeric(diff(series$DateTime)))
     print(paste('No temporal resolution specified. Mode of diff(timeseries) yielded ', temp_res, 'seconds.', sep=''))
