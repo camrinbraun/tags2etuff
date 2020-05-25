@@ -1,18 +1,19 @@
 get_tz <- function(etuff, what_tz = NULL){
 
-  if (class(etuff) != 'etuff') stop('Input object must be of class etuff.')
+  if (class(etuff) != 'etuff' & class(etuff) != 'etuff_archival') stop('Input object must be of class etuff or etuff_archival.')
 
   meta <- etuff$meta; df <- etuff$etuff
 
   ## get track to calc time zone(s) if this etuff has a track
-  if ('latitude' %in% names(df) & 'longitude' %in% names(df)){
-    locs <- df[,c('DateTime','latitude','longitude')]
-    locs <- locs[which(!is.na(locs$DateTime) & !is.na(locs$latitude) & !is.na(locs$longitude)),]
-    locs$longitude <- as.numeric(locs$longitude)
-    locs$latitude <- as.numeric(locs$latitude)
-    locs <- locs[which(!is.na(locs$latitude)),]
+  locs <- get_track(etuff)
 
-  }
+  #if ('latitude' %in% names(df) & 'longitude' %in% names(df)){
+  #  locs <- df[,c('DateTime','latitude','longitude')]
+  #  locs <- locs[which(!is.na(locs$DateTime) & !is.na(locs$latitude) & !is.na(locs$longitude)),]
+  #  locs$longitude <- as.numeric(locs$longitude)
+  #  locs$latitude <- as.numeric(locs$latitude)
+  #  locs <- locs[which(!is.na(locs$latitude)),]
+  #}
 
 
   ## figure out what time zone(s) to use
