@@ -2,7 +2,7 @@ archival_to_etuff <- function(archival, vars){
 
   idx <- list()
   nmax <- length(vars)
-  for (ii in 1:nmax) idx[[ii]] <- grep(vars[ii], archival$VariableName, ignore.case = T)
+  for (ii in 1:nmax) idx[[ii]] <- grep(vars[ii], archival$VariableName, fixed = T)
 
   if (length(unlist(idx)) == 0){
     warning('No names in this eTUFF file correspond to input vars.')
