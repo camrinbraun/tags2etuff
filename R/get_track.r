@@ -4,13 +4,18 @@
 
 get_track <- function(etuff, what_tz = NULL){
 
-  if (class(etuff) != 'etuff') stop('Input object must be of class etuff.')
+  if (class(etuff) != 'etuff' & class(etuff) != 'etuff_archival') stop('Input object must be of class etuff or etuff_archival.')
 
   meta <- etuff$meta; df <- data.frame(etuff$etuff)
 
-  ## get and format track
-  idx <- which(names(df) %in% c('DateTime','latitude','longitude','latitudeError','longitudeError','argosLC'))
-  tr <- df[,idx]
+  ## isolate the appropriate data
+  if (class(etuff) == 'etuff_archival'){
+    tr <- archival_to_etuff(df, vars = c('DateTime','latitude','longitude','latitudeError','longitudeError','argosLC'))
+  } else{
+    idx <- which(names(df) %in% c('DateTime','latitude','longitude','latitudeError','longitudeError','argosLC'))
+    tr <- df[,idx]
+  }
+
   tr <- tr[which(!is.na(tr$DateTime)),]
 
   idx <- which(names(tr) %in% c('latitude','longitude','latitudeError','longitudeError'))

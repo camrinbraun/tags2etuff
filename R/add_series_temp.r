@@ -30,8 +30,8 @@ add_series_temp <- function(series, pdt = NULL, pdt_interp = NULL, flag = TRUE){
   series$day <- format(series$DateTime_local, '%d-%b-%Y')
   series$date <- series$DateTime_local
   series$doy <- lubridate::yday(series$DateTime_local)
-  start_NAs <- length(which(is.na(series$temperature)))
   if (!any(names(series) %in% c('temperature'))) series$temperature <- NA
+  start_NAs <- length(which(is.na(series$temperature)))
   series_df <- getSeriesTemp(series, pdt, loess = pdt_interp, flag = flag)
 
   idx <- which(is.na(series$temperature))

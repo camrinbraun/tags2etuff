@@ -4,7 +4,7 @@
 #' @importFrom data.table fread
 #'
 
-read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
+read_archival <- function(etuff_file, header = TRUE, metaTypes = NULL){
 
   if (is.null(metaTypes)){
     print('metaTypes is NULL. Trying to retrieve from github.')
@@ -75,7 +75,7 @@ read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
   ## read etuff data
   if (!is.null(hdr)){
     # figure out how many hdr lines to skip when reading the data
-    x <- scan(etuff_file, what = character(), sep=',', nmax=1000)
+    x <- scan(etuff_file, what = character(), sep=',', nmax = 1000)
     skipLines <- grep('DateTime', x) - 1
 
     df <- data.frame(data.table::fread(etuff_file, sep=',', header = T, skip = skipLines))
@@ -84,7 +84,7 @@ read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
     df <- data.frame(data.table::fread(etuff_file, sep=',', header = T, skip = 0))
   }
 
-  df <- df %>% dplyr::select(-c(VariableID, VariableUnits)) %>% spread(VariableName, VariableValue)
+  df <- df %>% dplyr::select(-c(VariableID, VariableUnits))
 
   ## format date time
   names(df)[1] <- 'DateTime'
@@ -94,6 +94,7 @@ read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
     bins <- df[which(df$DateTime == '' | is.na(df$DateTime)),]
     drop_idx <- which(apply(bins, 2, FUN=function(x) all(is.na(x) | x == '')))
     bins <- bins[,-drop_idx]
+    bins <- bins %>% spread(VariableName, VariableValue)
     df <- df[which(df$DateTime != ''),]
   }
 
@@ -105,6 +106,7 @@ read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
   if (!exists('bins')) bins <- NULL
 
   etuff <- list(etuff = df, meta = hdr, bins = bins)
-  class(etuff) <- 'etuff'
+  class(etuff) <- 'etuff_archival'
   return(etuff)
+
 }
