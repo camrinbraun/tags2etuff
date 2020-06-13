@@ -1,0 +1,13 @@
+planned updates to tags2etuff package:
+
+  * no treatment of horizontal movement (e.g. GPE3, HMMoce, or ancillary SPOT tag data)
+  * nicer etuff print function
+  * treatment of multiple time zones for a single track / dataset
+  * add metadata specific to the PSAT tag's track like "modeled" and "GPE3"
+  * speed up reading etuff
+  * print etuff
+  * flag argument to add_series_temp
+  * quiet getCtrGPE3
+  * DAY NIGHT
+  * etuff to 3d movement
+
