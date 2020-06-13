@@ -18,6 +18,7 @@ get_mmd <- function(etuff){
 
   mmd$depthMax <- as.numeric(mmd$depthMax)
   mmd$depthMin <- as.numeric(mmd$depthMin)
+  mmd <- mmd[which(!is.na(mmd$depthMin) | !is.na(mmd$depthMax)),]
 
   return(mmd)
 }
