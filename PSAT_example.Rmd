@@ -36,8 +36,8 @@ data_dir <- './inst/extdata/159922_2020_196385/'
 
 ## load all tag metadata master sheet
 meta <- read.table('../nip_drake/RawData/all_tag_meta.csv', sep=',', header=T, blank.lines.skip = F, skip=0, stringsAsFactors = F)
-meta$time_coverage_start <- as.POSIXct(meta$time_coverage_start, tz='UTC')
-meta$time_coverage_end <- as.POSIXct(meta$time_coverage_end, tz='UTC')
+meta$time_coverage_start <- as.POSIXct(meta$time_coverage_start, format='%m/%d/%y', tz='UTC')
+meta$time_coverage_end <- as.POSIXct(meta$time_coverage_end, format='%m/%d/%y', tz='UTC')
 
 ## we currently use a unique instrument name for each deployment (taxonserialnumber_deploymentyear_tagPTT)
 idx <- which(meta$instrument_name == '159922_2020_196385')
@@ -151,7 +151,7 @@ srss <- get_srss(etuff, series)
 
 ```{r message=F, warning=F}
 
-srss <- srss[which(srss$DateTime < max(series$DateTime_local)),]
+srss <- srss[which(srss$DateTime < max(series$DateTime_local, na.rm=T)),]
 ## use the nighttime interval from srss to easily grab the next day's sunrise as the "end of night" period for plotting
 srss$end_night <- srss$night_interval@start + srss$night_interval@.Data
   
