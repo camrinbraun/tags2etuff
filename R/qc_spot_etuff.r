@@ -1,13 +1,21 @@
+#' Simple quality control plots for SPOT eTUFF file
+#'
 #' This function is to do very simple QC on SPOT tag conversion to eTUFF and the
 #' associated metadata. It does NOT do any filtering or further processing of
 #' the positions. Instead, it is meant to check that the coordinates, time
 #' stamps, location classes and associated metadata all make sense.
 #'
-#' @param etuff is etuff file output from tag_to_etuff()
+#' @param etuff is etuff file
+#' @param meta_row is the associated metadata
+#' @param writePNG is logical indicating whether or not to write the output to file as PNG
 #'
+#' @return a QC plot
+#' @export
+#'
+#' @importFrom lattice levelplot
 
 
-qc_spot_etuff <- function(etuff, meta_row, writePDF = FALSE, cutdates = FALSE){
+qc_spot_etuff <- function(etuff, meta_row, writePNG = FALSE){
 
   ## any where datetime and variablevalue are identical?
   if (class(etuff) != 'etuff') stop('Input etuff object must be of class etuff.')
@@ -57,7 +65,7 @@ qc_spot_etuff <- function(etuff, meta_row, writePDF = FALSE, cutdates = FALSE){
   ## get world map data
   world <- map_data('world')
 
-  #if (writePDF) pdf(paste(meta_row$instrument_name, '-ggmap.pdf', sep=''), width=8, height=12)
+  #if (writePNG) pdf(paste(meta_row$instrument_name, '-ggmap.pdf', sep=''), width=8, height=12)
   p1 <- ggplot() + geom_polygon(data = world, aes(x=long, y = lat, group = group)) +
     coord_fixed(xlim=xl, ylim=yl, ratio=1.3) + xlab('') + ylab('') +
     geom_path(data = df, aes(x = longitude, y = latitude)) +
@@ -76,11 +84,11 @@ qc_spot_etuff <- function(etuff, meta_row, writePDF = FALSE, cutdates = FALSE){
 
 
   #layout_matrix = rbind(c(1), c(2), c(3)))
-  if (writePDF){
+  if (writePNG){
     g <- gridExtra::arrangeGrob(grobs = list(p1, p2, p3), ncol=1, heights = c(6,2,2))
-    ggsave(file = paste(meta_row$instrument_name, '-ggmap.pdf', sep=''), width=8, height=8, units = 'in', g)
+    ggsave(file = paste(meta_row$instrument_name, '-ggmap.png', sep=''), width=8, height=8, units = 'in', g)
     #dev.off()
-    print(paste('Maps written to ', meta_row$instrument_name, '-ggmap.pdf.', sep=''))
+    print(paste('Maps written to ', meta_row$instrument_name, '-ggmap.png.', sep=''))
   } else{
     gridExtra::grid.arrange(grobs = list(p1, p2, p3), ncol=1, heights = c(6,2,2))
     print('Should have output plot to graphics device.')

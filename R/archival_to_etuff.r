@@ -1,3 +1,14 @@
+#' Convert recovered tag to eTUFF
+#'
+#' Converts recovered or archival tag dataset to eTUFF in a "computationally-friendly" way compared to the normal conversion.
+#'
+#' @param archival is long data frame of archival data
+#' @param vars is character list of variables of interest. These must match accepted variable names (see obsTypes).
+#'
+#' @return a dataframe subset of the archival data containing only the vars specified
+#' @export
+#'
+
 archival_to_etuff <- function(archival, vars){
 
   idx <- list()

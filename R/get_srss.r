@@ -1,3 +1,11 @@
+#' Get sunrise/sunset times
+#'
+#' Get sunrise/sunset times concurrent to the timeseries data in eTUFF. Typically this is used to label time series information with relevant SRSS times.
+#'
+#' @param etuff is object of class etuff
+#' @return a dataframe of sunrise and sunset information
+#' @export
+#'
 
 get_srss <- function(etuff){
 

@@ -1,3 +1,12 @@
+#' Get time zone(s) associated with the eTUFF object of interest
+#'
+#' Get time zone(s) associated with the eTUFF object of interest
+#'
+#' @param etuff is object of class etuff
+#' @return a vector containing the time zone(s) relevant to the eTUFF object of interest
+#' @export
+#'
+
 get_tz <- function(etuff, what_tz = NULL){
 
   if (class(etuff) != 'etuff' & class(etuff) != 'etuff_archival') stop('Input object must be of class etuff or etuff_archival.')

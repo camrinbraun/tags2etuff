@@ -1,3 +1,13 @@
+#' Get 3d data from eTUFF
+#'
+#' Extract location and vertical time series information and combine them into a dataframe that represents 3d movements.
+#'
+#' @param etuff is object of class etuff
+#' @param series is optional series as input. Typically this is NULL but can be supplied to speed up processing (i.e. if series has already been processed).
+#' @param fG is logical indicating whether or not to use foieGras to interpolate and standardize tracking data. Note this may already be done prior to building the eTUFF file and thus may be unncessary. See the eTUFF object's metadata/header info.
+#' @return a dataframe of 3d movements
+#' @export
+#'
 get_3d <- function(etuff, series = NULL, fG = TRUE,...){
 
   args <- list(...)

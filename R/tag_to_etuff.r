@@ -1,9 +1,6 @@
-# WORKING:
-# what about applying summaryPeriod var to some of the summarized data points?
-# lightloc is not even started
-# check GPE3 section for "finished" state
-# add define waypoint source in metadata for GPE3 or position info from MTI, Lotek or SPOT tags
-
+#' Convert satellite tag data to etuff
+#'
+#' Convert satellite tag data to etuff. Currently this function has good support for Wildlife Computers tags and is in development for others such as Lotek and MT.
 #'
 #' @param dir is directory the target data is stored in
 #' @param manufacturer is character indicating tag manufacturer. Choices are
@@ -25,6 +22,7 @@
 #'   recognized by the NASA OIIP project. Usually this is left NULL and the file
 #'   is auto-magically downloaded for you. The only reason you may want to
 #'   specify this would be in order to work offline.
+#' @param check_meta is logical indicating whether or not to check the etuff file metadata
 #' @param customCols is optional argument that allows custom specification of input columns for input \code{fName}. these custom specs must match the accepted obsTypes
 
 tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = NULL,

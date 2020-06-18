@@ -1,4 +1,11 @@
-# read a nicely formatted header
+#' Get header as metadata from eTUFF file
+#'
+#' Get header as metadata from eTUFF file
+#'
+#' @param etuff_file is file name to etuff file of interest
+#' @return a dataframe of metadata from the header of an eTUFF file
+#' @export
+
 get_header <- function(etuff_file, metaTypes = NULL){  ## read etuff header
 
   if (is.null(metaTypes)){

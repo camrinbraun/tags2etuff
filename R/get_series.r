@@ -1,7 +1,13 @@
-#' @param etuff is a valid etuff object
+#' Extract time series data as typically contained in -Series.csv output from Wildlife Computers
+#'
+#' Extract time series data as typically contained in -Series.csv output from Wildlife Computers
+#'
+#' @param etuff is object of class etuff
 #' @param temp_res is temporal resolution as valid argument to "by" in \code{seq.POSIXct}
-#' @param what_tz indicates the timezone (usually local time) for this tag dataset. If NULL (default), the function will use the timezone from the tagging location. In the future, this will get more sophisticated by attempting to query tz at each timestamp for associated lat/lon.
-
+#' @param what_tz indicates what time zone should be used for the series data. If NULL (default), the function will choose for you with some informative printed outputs to let you know whats happening.
+#' @return a dataframe of time series data, usually containing at least depth and temperature information
+#' @export
+#'
 
 get_series <- function(etuff, temp_res = NULL, what_tz = NULL){
 

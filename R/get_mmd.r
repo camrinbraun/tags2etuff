@@ -1,5 +1,11 @@
-#' @param etuff is a valid etuff object
-
+#' Get min/max depth data from eTUFF
+#'
+#' Extract min/max depth data as typically contained in -MinMaxDepth.csv output from Wildlife Computers
+#'
+#' @param etuff is object of class etuff
+#' @return a dataframe of min/max depth information
+#' @export
+#'
 
 get_mmd <- function(etuff){
 

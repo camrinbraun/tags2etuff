@@ -1,3 +1,11 @@
+#' Compute the mode of an input vector
+#'
+#' Compute the mode of an input vector
+#'
+#' @param x is input vector
+#' @return statistical mode of input vector
+#' @export
+
 Mode <- function(x, na.rm=FALSE) {
   # function from SO at http://stackoverflow.com/questions/2547402/is-there-a-built-in-function-for-finding-the-mode
   if(na.rm){
