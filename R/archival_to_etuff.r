@@ -7,7 +7,7 @@
 #'
 #' @return a dataframe subset of the archival data containing only the vars specified
 #' @export
-#'
+#' @import dplyr
 
 archival_to_etuff <- function(archival, vars){
 
@@ -22,7 +22,7 @@ archival_to_etuff <- function(archival, vars){
 
   idx <- unique(unlist(idx))
   archival <- archival[idx,]
-  archival <- archival %>% dplyr::select(-c(id)) %>% spread(VariableName, VariableValue)
+  archival <- archival %>% dplyr::select(-c(id)) %>% dplyr::spread(VariableName, VariableValue)
   archival <- archival[order(archival$DateTime),]
 
   return(archival)

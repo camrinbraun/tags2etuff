@@ -8,6 +8,8 @@ Mode(x, na.rm = FALSE)
 }
 \arguments{
 \item{x}{is input vector}
+
+\item{na.rm}{is logical indicating whether or not to ignore NA values}
 }
 \value{
 statistical mode of input vector

@@ -8,6 +8,8 @@ get_tz(etuff, what_tz = NULL)
 }
 \arguments{
 \item{etuff}{is object of class etuff}
+
+\item{what_tz}{is optional specification for time zone to use and bypass the search for one}
 }
 \value{
 a vector containing the time zone(s) relevant to the eTUFF object of interest

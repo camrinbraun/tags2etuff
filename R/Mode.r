@@ -3,6 +3,7 @@
 #' Compute the mode of an input vector
 #'
 #' @param x is input vector
+#' @param na.rm is logical indicating whether or not to ignore NA values
 #' @return statistical mode of input vector
 #' @export
 

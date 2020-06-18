@@ -25,7 +25,7 @@ read_archival <- function(etuff_file, header = TRUE, metaTypes = NULL){
   if (header){
     ## read etuff header
     hdr <- get_etuff_hdr(etuff_file)
-    hdr <- hdr %>% spread(varName, varVal)
+    hdr <- hdr %>% dplyr::spread(varName, varVal)
 
     ## something here to auto-format the hdr cols...
     for (i in 1:ncol(hdr)){
@@ -99,7 +99,7 @@ read_archival <- function(etuff_file, header = TRUE, metaTypes = NULL){
     bins <- df[which(df$DateTime == '' | is.na(df$DateTime)),]
     drop_idx <- which(apply(bins, 2, FUN=function(x) all(is.na(x) | x == '')))
     bins <- bins[,-drop_idx]
-    bins <- bins %>% spread(VariableName, VariableValue)
+    bins <- bins %>% dplyr::spread(VariableName, VariableValue)
     df <- df[which(df$DateTime != ''),]
   }
 

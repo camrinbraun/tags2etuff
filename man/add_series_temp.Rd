@@ -7,11 +7,11 @@
 add_series_temp(series, pdt = NULL, pdt_interp = NULL, flag = TRUE)
 }
 \arguments{
-\item{series}{is output from \link{\code{get_series}}}
+\item{series}{is output from \code{get_series}}
 
-\item{pdt}{is output from \link{\code{get_pdt}}}
+\item{pdt}{is output from \code{get_pdt}}
 
-\item{pdt_interp}{is output from \link{\code{interp_pdt}}}
+\item{pdt_interp}{is output from \code{interp_pdt}}
 
 \item{flag}{is logical indicating whether or not to flag potentially bad interpolated points. This should almost always be TRUE (the default).}
 }

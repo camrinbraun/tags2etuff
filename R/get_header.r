@@ -3,6 +3,7 @@
 #' Get header as metadata from eTUFF file
 #'
 #' @param etuff_file is file name to etuff file of interest
+#' @param metaTypes is dataframe of allowed metadata types from github
 #' @return a dataframe of metadata from the header of an eTUFF file
 #' @export
 
@@ -18,8 +19,8 @@ get_header <- function(etuff_file, metaTypes = NULL){  ## read etuff header
 
   }
 
-  hdr <- get_etuff_hdr(etuff_file, metaTypes)
-  hdr <- hdr %>% spread(varName, varVal)
+  hdr <- get_etuff_hdr(etuff_file)
+  hdr <- hdr %>% dplyr::spread(varName, varVal)
 
   ## something here to auto-format the hdr cols...
   for (i in 1:ncol(hdr)){

@@ -38,7 +38,7 @@ get_tat <- function(etuff){
 
   vars = names(tad)[grep('timeattemp', names(tad), ignore.case = TRUE)]
 
-  tat.new <- gather(tad, bin, freq, vars, factor_key=TRUE)
+  tat.new <- tidyr::gather(tad, bin, freq, vars, factor_key=TRUE)
   tat.new$freq <- as.numeric(tat.new$freq)
 
   #tat.new <- stats::reshape(tad, ids = tad$DateTime, direction = 'long',

@@ -13,5 +13,5 @@ get_etuff_hdr(etuff_file)
 a dataframe of metadata from the header of an eTUFF file
 }
 \description{
-WARNING: this is an internal function. Instead see \link{\code{get_header}}.
+WARNING: this is an internal function. Instead see \code{get_header}.
 }

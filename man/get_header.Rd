@@ -8,6 +8,8 @@ get_header(etuff_file, metaTypes = NULL)
 }
 \arguments{
 \item{etuff_file}{is file name to etuff file of interest}
+
+\item{metaTypes}{is dataframe of allowed metadata types from github}
 }
 \value{
 a dataframe of metadata from the header of an eTUFF file

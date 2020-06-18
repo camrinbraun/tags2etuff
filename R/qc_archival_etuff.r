@@ -12,6 +12,8 @@
 #' @export
 #'
 #' @importFrom lattice levelplot
+#' @import ggplot2
+#' @import ggforce
 
 qc_archival_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
 

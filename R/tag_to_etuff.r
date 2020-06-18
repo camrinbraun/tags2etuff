@@ -53,7 +53,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   if ('dates' %in% names(args)){
     dates <- args$dates
   } else{
-    if (!is.POSIXct(meta_row$time_coverage_start) | !is.POSIXct(meta_row$time_coverage_end)) stop('Start and end times specified by meta_row must be of class POSIXct.')
+    if (!lubridate::is.POSIXct(meta_row$time_coverage_start) | !lubridate::is.POSIXct(meta_row$time_coverage_end)) stop('Start and end times specified by meta_row must be of class POSIXct.')
     dates <- c(meta_row$time_coverage_start, meta_row$time_coverage_end)
   }
 
@@ -111,7 +111,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
 
     #if (is.null(fName)) stop('fName must be specified when using customColsz. This is the file name of interest.')
 
-    #dat <- read.table(paste(dir, fName, sep=''), sep=',', header=T, blank.lines.skip = F)
+    #dat <- utils::read.table(paste(dir, fName, sep=''), sep=',', header=T, blank.lines.skip = F)
 
     #print(customCols)
     #print(dat[1,])
@@ -169,7 +169,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
     }
 
     if (fe){
-      argos <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
+      argos <- utils::read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
 
       # organize argos.new for flatfile format
       argos.new <- argos[which(argos$Type != 'User'),]
@@ -467,7 +467,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
 
       # if series exists we load it
       arch <- data.frame(data.table::fread(fList[fidx], sep=',', header = T, stringsAsFactors = F, fill=TRUE))#, skip = skipLines)
-      #arch <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F, stringsAsFactors = F)#, skip = skipLines)
+      #arch <- utils::read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F, stringsAsFactors = F)#, skip = skipLines)
 
       nms <- names(arch)
       ## for temp start with exact "temperature" then "external.temperature" then "recorder.temp"
@@ -549,7 +549,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       print('Getting Series data...')
 
       # if series exists we load it
-      series <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
+      series <- utils::read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
       series$dt <- lubridate::parse_date_time(paste(series$Day, series$Time), orders='dby HMS', tz='UTC')
       series <- series[which(series$dt >= dates[1] & series$dt <= dates[2]),]
 
@@ -601,17 +601,17 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       print('Getting light data...')
 
       # if light exists we load it
-      light <- try(read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F, skip = 2), silent = TRUE)
+      light <- try(utils::read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F, skip = 2), silent = TRUE)
       if (class(light) == 'try-error'){
-        light <- try(read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F, skip = 0), silent = TRUE)
+        light <- try(utils::read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F, skip = 0), silent = TRUE)
         if (class(light) == 'try-error'){
           stop('Cant read light data.')
         } else{
-          light <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F, skip = 0)
+          light <- utils::read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F, skip = 0)
         }
 
       } else{
-        light <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F, skip = 2)
+        light <- utils::read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F, skip = 2)
 
       }
 
@@ -669,7 +669,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       print('Getting min/max depth data...')
 
       # if file exists we load it
-      mmd <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
+      mmd <- utils::read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
       mmd$dt <- lubridate::parse_date_time(mmd$Date, orders=HMMoce::findDateFormat(mmd$Date), tz='UTC')
       mmd <- mmd[which(mmd$dt >= dates[1] & mmd$dt <= dates[2]),]
 
@@ -721,7 +721,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       print('Getting SST data...')
 
       # if file exists we load it
-      sst <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
+      sst <- utils::read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
       sst$dt <- lubridate::parse_date_time(sst$Date, orders=HMMoce::findDateFormat(sst$Date), tz='UTC')
       sst <- sst[which(sst$dt >= dates[1] & sst$dt <= dates[2]),]
 
@@ -754,7 +754,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       print('Getting MixedLayer data...')
 
       # if file exists we load it
-      ml <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
+      ml <- utils::read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
       ml$Date <- lubridate::parse_date_time(ml$Date, orders=findDateFormat(ml$Date), tz='UTC')
       ml <- ml[which(ml$Date >= dates[1] & ml$Date <= dates[2]),]
 
@@ -809,7 +809,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       print('Getting Histos data...')
 
       # if file exists we load it
-      histo <- read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
+      histo <- utils::read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
 
       # try to read bin limits from file
       tat.lim <- histo[which(histo$HistType == 'TATLIMITS'), grep('Bin', names(histo))]
@@ -1024,7 +1024,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       ## write the output
       build_meta_head(meta_row = meta_row, filename = etuff_file, write_hdr = T)
       #write.table(etuff, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
-      print(head(returnData))
+      print(utils::head(returnData))
       data.table::fwrite(returnData, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
 
       print(paste('Adding data to eTUFF file ', etuff_file, '.', sep=''))
@@ -1035,7 +1035,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   }
 
   ## output of class etuff
-  df <- returnData %>% dplyr::select(-c(VariableID, VariableUnits)) %>% spread(VariableName, VariableValue)
+  df <- returnData %>% dplyr::select(-c(VariableID, VariableUnits)) %>% dplyr::spread(VariableName, VariableValue)
 
   ## datetime is blank for histo bins and incorporates adjustments above for bins whether or not theyre provided as inputs
   if (any(df$DateTime == '')){

@@ -1,6 +1,6 @@
 #' Get header as metadata from eTUFF file
 #'
-#' WARNING: this is an internal function. Instead see \link{\code{get_header}}.
+#' WARNING: this is an internal function. Instead see \code{get_header}.
 #'
 #' @param etuff_file is file name to etuff file of interest
 #' @return a dataframe of metadata from the header of an eTUFF file

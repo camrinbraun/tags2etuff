@@ -13,7 +13,8 @@
 #' @export
 #'
 #' @importFrom lattice levelplot
-
+#' @import ggplot2
+#' @import ggforce
 
 qc_spot_etuff <- function(etuff, meta_row, writePNG = FALSE){
 
