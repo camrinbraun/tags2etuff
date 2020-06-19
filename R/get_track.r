@@ -30,7 +30,7 @@ get_track <- function(etuff, what_tz = NULL){
   ## deal with timezones
   if (is.null(what_tz)) what_tz <- get_tz(etuff, what_tz)
   tr$tz <- what_tz
-  for (i in 1:nrow(tr)) tr$localHour[i] <- lubridate::hour(with_tz(tr$DateTime[i], tr$tz[i]))
+  for (i in 1:nrow(tr)) tr$localHour[i] <- lubridate::hour(lubridate::with_tz(tr$DateTime[i], tr$tz[i]))
 
   return(tr)
 }

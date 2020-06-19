@@ -46,14 +46,14 @@ get_series <- function(etuff, temp_res = NULL, what_tz = NULL){
   } else {
 
     ## setup output dates
-    start <- with_tz(meta$time_coverage_start, tz = what_tz)
+    start <- lubridate::with_tz(meta$time_coverage_start, tz = what_tz)
     #start <- lubridate::with_tz(start, tz=what_tz)
-    end <- with_tz(meta$time_coverage_end, tz = what_tz)
+    end <- lubridate::with_tz(meta$time_coverage_end, tz = what_tz)
     #end <- lubridate::with_tz(end, tz=what_tz)
     dt_vec <- data.frame(DateTime_local = lubridate::with_tz(seq(start, end, by = temp_res), tz=what_tz))
 
     ## convert series to local tz
-    series$DateTime_local <- with_tz(series$DateTime, tzone = what_tz)
+    series$DateTime_local <- lubridate::with_tz(series$DateTime, tzone = what_tz)
 
   }
 

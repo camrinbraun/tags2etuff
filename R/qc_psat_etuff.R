@@ -110,7 +110,7 @@ qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
     world <- map_data('world')
 
     if (!any(etuff$VariableName == 'latitude')) stop('map = TRUE but not lat/lon data in etuff.')
-    df <- etuff %>% dplyr::spread(VariableName, VariableValue)
+    df <- etuff %>% tidyr::spread(VariableName, VariableValue)
     df <- df[which(!is.na(df$latitude)),]
 
     ## format date time

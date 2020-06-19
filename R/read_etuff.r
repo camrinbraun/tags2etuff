@@ -25,7 +25,7 @@ read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
   if (header){
     ## read etuff header
     hdr <- get_etuff_hdr(etuff_file)
-    hdr <- hdr %>% spread(varName, varVal)
+    hdr <- hdr %>% tidyr::spread(varName, varVal)
 
     ## something here to auto-format the hdr cols...
     for (i in 1:ncol(hdr)){
@@ -89,7 +89,7 @@ read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
     df <- data.frame(data.table::fread(etuff_file, sep=',', header = T, skip = 0))
   }
 
-  df <- df %>% dplyr::select(-c(VariableID, VariableUnits)) %>% spread(VariableName, VariableValue)
+  df <- df %>% dplyr::select(-c(VariableID, VariableUnits)) %>% tidyr::spread(VariableName, VariableValue)
 
   ## format date time
   names(df)[1] <- 'DateTime'

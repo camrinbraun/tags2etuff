@@ -20,7 +20,7 @@ get_header <- function(etuff_file, metaTypes = NULL){  ## read etuff header
   }
 
   hdr <- get_etuff_hdr(etuff_file)
-  hdr <- hdr %>% dplyr::spread(varName, varVal)
+  hdr <- hdr %>% tidyr::spread(varName, varVal)
 
   ## something here to auto-format the hdr cols...
   for (i in 1:ncol(hdr)){

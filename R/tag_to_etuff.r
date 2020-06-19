@@ -24,6 +24,7 @@
 #'   specify this would be in order to work offline.
 #' @param check_meta is logical indicating whether or not to check the etuff file metadata
 #' @param customCols is optional argument that allows custom specification of input columns for input \code{fName}. these custom specs must match the accepted obsTypes
+#' @export
 
 tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = NULL,
                          obsTypes = NULL, check_meta = TRUE,...){
@@ -1035,7 +1036,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   }
 
   ## output of class etuff
-  df <- returnData %>% dplyr::select(-c(VariableID, VariableUnits)) %>% dplyr::spread(VariableName, VariableValue)
+  df <- returnData %>% dplyr::select(-c(VariableID, VariableUnits)) %>% tidyr::spread(VariableName, VariableValue)
 
   ## datetime is blank for histo bins and incorporates adjustments above for bins whether or not theyre provided as inputs
   if (any(df$DateTime == '')){
