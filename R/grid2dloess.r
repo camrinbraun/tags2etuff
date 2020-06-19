@@ -135,7 +135,7 @@ grid2dloess <- function(data, xgrid, ygrid, span_x, span_y,
   #
   # Loop through all points in the estimate grid
   #
-  pb <- txtProgressBar(min = min(sy), max = max(sy), style = 3)
+  #pb <- txtProgressBar(min = min(sy), max = max(sy), style = 3)
 
   for (j in sy){
     dy = mygrid - ygrid_est[j]
@@ -220,13 +220,13 @@ grid2dloess <- function(data, xgrid, ygrid, span_x, span_y,
       }
     }
 
-    Sys.sleep(0.1)
+    #Sys.sleep(0.1)
     # update progress bar
-    setTxtProgressBar(pb, j)
+    #setTxtProgressBar(pb, j)
 
   }
 
-  close(pb)
+  #close(pb)
   result = list(sm_data = sm_data, flag = flag, xgrid = xgrid_out, ygrid = ygrid_out)
   return(result)
   # end function
