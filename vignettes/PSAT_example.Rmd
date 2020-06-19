@@ -2,48 +2,37 @@
 title: "PSAT example"
 author: "Camrin Braun"
 date: "Last updated: `r Sys.Date()`"
-output: github_document
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{PSAT example}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
 ---
-
+  
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, error = TRUE)
 ```
 
-This is an example script for a general workflow to deal with PSAT data. Note this script is missing the following (as of 20200424):
-  * nicer etuff print function
-  * treatment of multiple time zones for a single track / dataset
+This is an example script for a general workflow to deal with PSAT data. 
 
 ```{r, message=F}
-library(lubridate)
+library(tags2etuff)
 library(tidyverse)
-library(lattice)
-library(lutz)
-library(raster)
-# this should be publicly available on my github, it may install as a package but can definitely just load_all
-devtools::load_all('../tags2etuff') 
-devtools::load_all('../analyzePSAT')
 ```
 
 ## Raw tag data to eTUFF
 First we convert the "raw" tag data from whatever format it's in into a standardized, self-contained flat file called eTUFF. This is a product of the NASA OIIP project and is the backbone of tag data standardization in our group. For more info, check out the OIIP website and especially look over the metadata and observation data types spreadsheets in the tagbase repo on Github.
 
-Note the master metadata spreadsheet currently lives in a private repo on Github (`nip_drake`). Request access from CDB if you need it.
-
 ```{r, cache=T}
 
 ## tell it where your data lives
-data_dir <- './inst/extdata/159922_2020_196385/'
+data_dir <- '../inst/extdata/159922_2020_196385/'
 
 ## load all tag metadata master sheet
-meta <- read.table('../nip_drake/RawData/all_tag_meta.csv', sep=',', header=T, blank.lines.skip = F, skip=0, stringsAsFactors = F)
-meta$time_coverage_start <- as.POSIXct(meta$time_coverage_start, format='%m/%d/%y', tz='UTC')
-meta$time_coverage_end <- as.POSIXct(meta$time_coverage_end, format='%m/%d/%y', tz='UTC')
+meta <- readRDS('../inst/extdata/meta_example.rds')
 
-## we currently use a unique instrument name for each deployment (taxonserialnumber_deploymentyear_tagPTT)
-idx <- which(meta$instrument_name == '159922_2020_196385')
-meta_row <- meta[idx,]
-
-etuff <- tag_to_etuff(data_dir, meta_row, gpe3 = TRUE)
+## note there are MANY input options to this function!
+etuff <- tag_to_etuff(data_dir, meta, gpe3 = TRUE)
 
 ```
 
@@ -114,6 +103,8 @@ By printing `etuff` we currently get a big sloppy data frame. In the future, we'
 Get the usual PDT data:
 ```{r}
 pdt <- get_pdt(etuff)
+head(pdt)
+
 ```
 
 Note this is how we'll get PDT data for any tag type with any temporal resolution. Ever. The series is even more fun but first let's run a quick LOESS interpolation on the PDT data to fill in the gaps:
@@ -126,13 +117,14 @@ Now let's get the series data. And again, this is how we'll always get series da
 
 ```{r}
 series <- get_series(etuff)
+head(series)
+
 ```
 
-Oops, this throws a timezone error. The way it prints isn't super nice at the moment but what you'll decipher is the function is trying to assign multiple time zones (yes, the example thresher crossed a time zone line). We don't currently have functionality to deal wtih multiple time zones in a single tag dataset so the error is basically asking you to pick one of the options it gives you:
-```{r}
+This prints a timezone warning which suggests the tag crossed a timezone during deployment. To deal with it, the function assigned a "default" timezone by taking the mode of daily timezones. If you want different behavior, you can pick one of the timezone options the tag was in. The options are printed out from the above so it's as simple as specifying:
+```{r, eval = F}
 series <- get_series(etuff, what_tz = 'Asia/Riyadh')
 ```
-
 
 You will also notice this creates a time series from tag to pop based on the detected temporal resolution of the series data (thresher example is 75 seconds). I think it's much better to have a regularized time series with a bunch of NAs than to just have those timestamps missing completely. This is also how we calculate, for example, how much series data we have versus what is missing (i.e. wasn't transmitted). And we can do some tricks like use the LOESS interpolated depth-temp info to fill in at least some of the missing temperature measurements in the series:
 
@@ -142,21 +134,22 @@ series <- add_series_temp(series, pdt, pdt_interp)
 
 ## add a day/night column to your series data based on local sunrise/sunset times
 series$dn <- add_daynight(series, etuff)
+head(series)
 
 ## you can also get your own df of sunrise and sunset times if you care (this is happening under the hood in add_daynight above) 
-srss <- get_srss(etuff, series)
-
+srss <- get_srss(etuff)
+head(srss)
 
 ```
 
-```{r message=F, warning=F}
+```{r message=F, warning=F, echo=F}
 
 srss <- srss[which(srss$DateTime < max(series$DateTime_local, na.rm=T)),]
 ## use the nighttime interval from srss to easily grab the next day's sunrise as the "end of night" period for plotting
 srss$end_night <- srss$night_interval@start + srss$night_interval@.Data
   
 ggplot(srss) + geom_rect(aes(xmin=sunset, xmax=end_night, ymin=-650, ymax=0), alpha=0.25, colour='grey') +
-  geom_point(data = series, aes(x=DateTime, y=depth * -1, colour=temperature)) + ylim(-650,0)
+  geom_point(data = series, aes(x=DateTime, y=depth * -1, colour=temperature)) + ylim(-650,0) + ylab('Depth (m)')
 
 ```
 
@@ -164,21 +157,16 @@ ggplot(srss) + geom_rect(aes(xmin=sunset, xmax=end_night, ymin=-650, ymax=0), al
 This will get the track from the etuff file unless the fish was double-tagged AND thus that tag has its own etuff file. Working on how to deal with that
 ```{r, eval=T, message=F, warning=F}
 track <- get_track(etuff)
+head(track)
 
 ```
 
+There is also other functionality such as the -Histos file common to most Wildlife Computers PSAT datasets. The bin limits are inherently built in so no need for keeping track of them separately via a tag programming file, etc:
+```{r, eval=T, message=F, warning=F}
+tad <- get_tad(etuff)
+head(tad)
 
-
-## Still working on these
-
-Unless metadata suggests the fish was double-tagged, in which case, go get that instead:
-```{r, eval=F, message=F, warning=F}
-
+tat <- get_tad(etuff)
+head(tat)
 ```
 
-
-And we need some functionality for the standard plots (but likely move these to analyzePSAT) including:
-  * TAD/TAT frequency barplots (with a day/night option)
-  * series data colored by temp
-  * interpolated PDT
-  * nice but simple map, could start with HMMoce or build_move style plots
