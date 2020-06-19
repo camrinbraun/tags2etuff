@@ -6,6 +6,8 @@ Authors@R: c(person("Camrin", "Braun", email = "camrin.braun@gmail.com", role = 
 Maintainer: Camrin Braun <camrin.braun@gmail.com>
 Description: Convert the myriad of satellite tag data into flat, standardized eTUFF file
 Depends: R (>= 3.3.2)
+Suggests: knitr, 
+    rmarkdown
 Imports: lubridate,
     stringr,
     ggplot2,
