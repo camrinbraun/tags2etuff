@@ -4,7 +4,7 @@
 \alias{extract.light}
 \title{Extract lgiht from Wildlife Computers tag data}
 \usage{
-extract.light(light)
+\method{extract}{light}(light)
 }
 \arguments{
 \item{lightloc}{data frame read from -LightLoc.csv output of Wildlife Computers DAP
