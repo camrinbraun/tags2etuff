@@ -64,12 +64,12 @@ getCtr_gpe3 <- function(ncFile, csvFile, threshold = 50, makePlot=FALSE){
 
   for (i in 1:dim(s)[3]){
     #To create probability surfaces (95%, 75%, 50%):
-    RasterVals <- sort(getValues(Raster.HR[[i]])) #sort the probability values
+    RasterVals <- sort(raster::getValues(Raster.HR[[i]])) #sort the probability values
 
     #sets breaks at the cumulative probabilities (95%, 75%, 50%) with a cap at 1 (higher than necessary, but no value can ever exceed 1)
     Raster.breaks <- c(RasterVals[max(which(cumsum(RasterVals) <= threshold))])
 
-    print(i)
+    #print(i)
     ctr <- raster::rasterToContour(Raster.HR[[i]], levels=Raster.breaks)
     #ctr <- contourLines(lon, lat, s[[i]])
     #idx <- which.min(lapply(ctr, FUN=function(x) which(round(x$level,1) == round(threshold, 1))) == 1)
