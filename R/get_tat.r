@@ -14,7 +14,7 @@ get_tat <- function(etuff){
     #tad <- df[idx,]
    # tad <- tad %>% dplyr::select(-c(id)) %>% spread(VariableName, VariableValue)
 
-    tad <- archival_to_etuff(df, vars = c('timeattemp'))
+    tad <- archival_to_etuff(df, vars = c('TimeAtTemp'))
 
   } else{
     idx <- grep('timeattemp', names(df), ignore.case = T)
