@@ -1,6 +1,9 @@
 #' Get header as metadata from eTUFF file
 #'
+#' WARNING: this is an internal function. Instead see \code{get_header}.
+#'
 #' @param etuff_file is file name to etuff file of interest
+#' @return a dataframe of metadata from the header of an eTUFF file
 #'
 
 get_etuff_hdr <- function(etuff_file){

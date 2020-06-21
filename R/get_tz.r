@@ -1,3 +1,13 @@
+#' Get time zone(s) associated with the eTUFF object of interest
+#'
+#' Get time zone(s) associated with the eTUFF object of interest
+#'
+#' @param etuff is object of class etuff
+#' @param what_tz is optional specification for time zone to use and bypass the search for one
+#' @return a vector containing the time zone(s) relevant to the eTUFF object of interest
+#' @export
+#'
+
 get_tz <- function(etuff, what_tz = NULL){
 
   if (class(etuff) != 'etuff' & class(etuff) != 'etuff_archival') stop('Input object must be of class etuff or etuff_archival.')
@@ -8,7 +18,7 @@ get_tz <- function(etuff, what_tz = NULL){
   #locs <- get_track(etuff)
 
   if (class(etuff) == 'etuff_archival'){
-    locs <- df %>% filter(VariableName %in% c('DateTime','latitude','longitude')) %>% dplyr::select(-c(id)) %>% spread(VariableName, VariableValue)
+    locs <- df %>% filter(VariableName %in% c('DateTime','latitude','longitude')) %>% dplyr::select(-c(id)) %>% tidyr::spread(VariableName, VariableValue)
     locs$longitude <- as.numeric(locs$longitude)
     locs$latitude <- as.numeric(locs$latitude)
     locs <- locs[which(!is.na(locs$latitude)),]

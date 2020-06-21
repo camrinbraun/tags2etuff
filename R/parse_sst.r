@@ -1,7 +1,11 @@
+#' Prepare SST data from mixed sources for eTUFF standardization
+#'
+#' Prepare SST data from mixed sources for eTUFF standardization. This is nearly always useful for dealing with Wildlife Computers tag datasets when SSTs can be derived from multiple "sources".
 #'
 #' @param sst is data frame of data from Wildlife Computers -SST.csv
 #' @param obsTypes is data frame of observation types read from Github
-#'
+#' @return a "master" sst dataset compiled across potential sources
+#' @export
 
 parse_sst <- function(sst, obsTypes){
 

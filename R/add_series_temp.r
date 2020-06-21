@@ -1,8 +1,14 @@
 #' Add temperature to series data, if possible
 #'
-#' @param series
-#' @param pdt
-#' @param pdt_interp
+#' Add missing temperature values to series data from interpolated depth-temperature profile data
+#'
+#' @param series is output from \code{get_series}
+#' @param pdt is output from \code{get_pdt}
+#' @param pdt_interp is output from \code{interp_pdt}
+#' @param flag is logical indicating whether or not to flag potentially bad interpolated points. This should almost always be TRUE (the default).
+#' @return a new series dataframe with additional temperature values where appropriate
+#' @export
+#'
 
 add_series_temp <- function(series, pdt = NULL, pdt_interp = NULL, flag = TRUE){
 

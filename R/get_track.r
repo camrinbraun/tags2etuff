@@ -1,6 +1,11 @@
-#' @param etuff is a valid etuff object
+#' Get track data from eTUFF
+#'
+#' Extract track data from eTUFF
+#'
+#' @param etuff is object of class etuff
 #' @param what_tz indicates the timezone (usually local time) for this tag dataset. If NULL (default), the function will use the timezone from the tagging location. In the future, this will get more sophisticated by attempting to query tz at each timestamp for associated lat/lon.
-
+#' @return a dataframe of lat/lon and (sometimes) associated error
+#' @export
 
 get_track <- function(etuff, what_tz = NULL){
 
@@ -25,7 +30,7 @@ get_track <- function(etuff, what_tz = NULL){
   ## deal with timezones
   if (is.null(what_tz)) what_tz <- get_tz(etuff, what_tz)
   tr$tz <- what_tz
-  for (i in 1:nrow(tr)) tr$localHour[i] <- lubridate::hour(with_tz(tr$DateTime[i], tr$tz[i]))
+  for (i in 1:nrow(tr)) tr$localHour[i] <- lubridate::hour(lubridate::with_tz(tr$DateTime[i], tr$tz[i]))
 
   return(tr)
 }

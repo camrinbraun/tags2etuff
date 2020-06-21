@@ -1,8 +1,14 @@
-#' @param etuff
-#' @param meta_row
-#' @param etuff_file is an etuff text file
-#' @param header is logical indicating whether or not the target etuff_file has a header. This will nearly always be TRUE (default).
-#' @param metaTypes is a dataframe that describes the appropriate inventory of metadata vocabulary. Default is NULL in which this table is read from Github.
+#' Write eTUFF output file
+#'
+#' Write eTUFF output file
+#'
+#' @param etuff input etuff object
+#' @param meta_row optional metadata input but typically the etuff file already has this
+#' @param etuff_file is desired output etuff file
+#' @param check_meta is logical indicating whether the metadata should be checked prior to writing
+#' @param metaTypes optional. is a dataframe that describes the appropriate inventory of metadata vocabulary. Default is NULL in which this table is read from Github.
+#' @return writes output etuff to disk
+#' @export
 
 write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE,...){
 
