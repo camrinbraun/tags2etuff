@@ -98,7 +98,8 @@ read_archival <- function(etuff_file, header = TRUE, metaTypes = NULL){
     df <- df[which(df$DateTime != ''),]
   }
 
-  df$DateTime <- as.POSIXct(df$DateTime, tz='UTC')
+  #df$DateTime <- as.POSIXct(df$DateTime, tz='UTC')
+  df$DateTime <- fasttime::fastPOSIXct(df$DateTime, tz='UTC')
   warning('Current TZ specification is UTC.')
 
   df$id <- hdr$instrument_name
