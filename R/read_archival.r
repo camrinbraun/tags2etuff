@@ -1,8 +1,13 @@
+#' Read an archival tag stored as eTUFF
+#'
+#' Read an archival tag stored as eTUFF. This only differs from \code{read_etuff} in that it cuts some corners in an attempt to read such a large file faster.
+#'
 #' @param etuff_file is an etuff text file
 #' @param header is logical indicating whether or not the target etuff_file has a header. This will nearly always be TRUE (default).
 #' @param metaTypes is a dataframe that describes the appropriate inventory of metadata vocabulary. Default is NULL in which this table is read from Github.
 #' @importFrom data.table fread
-#'
+#' @export
+#' @return an etuff_archival object
 
 read_archival <- function(etuff_file, header = TRUE, metaTypes = NULL){
 
@@ -20,7 +25,7 @@ read_archival <- function(etuff_file, header = TRUE, metaTypes = NULL){
   if (header){
     ## read etuff header
     hdr <- get_etuff_hdr(etuff_file)
-    hdr <- hdr %>% spread(varName, varVal)
+    hdr <- hdr %>% tidyr::spread(varName, varVal)
 
     ## something here to auto-format the hdr cols...
     for (i in 1:ncol(hdr)){
@@ -94,7 +99,7 @@ read_archival <- function(etuff_file, header = TRUE, metaTypes = NULL){
     bins <- df[which(df$DateTime == '' | is.na(df$DateTime)),]
     drop_idx <- which(apply(bins, 2, FUN=function(x) all(is.na(x) | x == '')))
     bins <- bins[,-drop_idx]
-    bins <- bins %>% spread(VariableName, VariableValue)
+    bins <- bins %>% tidyr::spread(VariableName, VariableValue)
     df <- df[which(df$DateTime != ''),]
   }
 

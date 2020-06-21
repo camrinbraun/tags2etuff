@@ -1,4 +1,13 @@
-
+#' Interpolate depth-temperature profile data to gap-fill
+#'
+#' Interpolate depth-temperature profile data to gap-fill
+#'
+#' @param pdt is dataframe of depth-temperature profile data
+#' @param span_x is interpolation input param
+#' @param span_y is interpolation input param
+#' @return a list containing a data frame of interpolated depth-temperature data and a matching data frame with flags to highlihgt potential interpolation issues
+#' @export
+#'
 interp_pdt <- function(pdt, span_x = 5, span_y = 150){
 
   if (class(pdt) == 'etuff'){

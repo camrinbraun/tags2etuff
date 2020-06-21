@@ -1,10 +1,19 @@
+#' Simple quality control plots for archival eTUFF file
+#'
 #' This function is to do very simple QC on PSAT tag conversion to eTUFF and the
 #' associated metadata. It is meant to check that the converted data make sense.
 #'
-#' @param etuff is etuff file output from tag_to_etuff()
+#' @param etuff is etuff file
+#' @param meta_row is the associated metadata
+#' @param writePNG is logical indicating whether or not to write the output to file as PNG
+#' @param map is logical indicating whether to try to add a map (assuming track data is present in eTUFF)
 #'
+#' @return a QC plot
+#' @export
 #'
-#' @importFrom levelplot lattice
+#' @importFrom lattice levelplot
+#' @import ggplot2
+#' @import ggforce
 
 qc_archival_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
 

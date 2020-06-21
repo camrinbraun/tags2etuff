@@ -1,5 +1,11 @@
-#' @param etuff is a valid etuff object
-#tat.plot <- levelplot(tad$freq ~ tad$DateTime * tad$bin_max)
+#' Get time-at-temperature data from eTUFF
+#'
+#' Extract time-at-temperature data as typically contained in -Histos.csv output from Wildlife Computers
+#'
+#' @param etuff is object of class etuff
+#' @return a dataframe of min/max depth information
+#' @export
+#'
 
 get_tat <- function(etuff){
 
@@ -32,7 +38,7 @@ get_tat <- function(etuff){
 
   vars = names(tad)[grep('timeattemp', names(tad), ignore.case = TRUE)]
 
-  tat.new <- gather(tad, bin, freq, vars, factor_key=TRUE)
+  tat.new <- tidyr::gather(tad, bin, freq, vars, factor_key=TRUE)
   tat.new$freq <- as.numeric(tat.new$freq)
 
   #tat.new <- stats::reshape(tad, ids = tad$DateTime, direction = 'long',

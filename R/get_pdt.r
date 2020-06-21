@@ -1,4 +1,11 @@
-#' @param etuff is a valid etuff object
+#' Get depth-temperature profile data from eTUFF
+#'
+#' Extract depth-temperature profile data as typically contained in -PDTs.csv output from Wildlife Computers
+#'
+#' @param etuff is object of class etuff
+#' @return a dataframe of min/max depth information
+#' @export
+#'
 
 get_pdt <- function(etuff){
 
