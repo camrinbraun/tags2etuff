@@ -538,6 +538,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       } else {
         returnData <- arch.new
       }
+      rm(arch); rm(arch.new); gc()
     } # end fe
     if (exists('fe')) rm(fe)
 
@@ -1020,15 +1021,14 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   #--------------------------
   ## FINISHED
   #--------------------------
+  print('Cleaning up...')
 
   ## cleaning step to ensure no timestamp has multiple entries for the same variableid
   returnData <- distinct(returnData, DateTime, VariableName, .keep_all = TRUE)
   returnData <- returnData[order(returnData$DateTime, returnData$VariableID),]
-
   ## convert to char and fill NAs with blanks for dealing with TAD/TAT bins
   returnData$DateTime <- as.character(returnData$DateTime)
   returnData$DateTime[which(is.na(returnData$DateTime))] <- ''
-
 
   if(exists('write_direct')){
     if (write_direct == TRUE & exists('etuff_file')){
@@ -1046,7 +1046,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   }
 
   ## output of class etuff
-  print('Generating output object.')
+  print('Generating output object...')
   #df <- returnData %>% dplyr::select(-c(VariableID, VariableUnits)) %>% tidyr::spread(VariableName, VariableValue)
   df <- returnData %>% dplyr::select(-c(VariableID, VariableUnits)) %>%
     tidyfast::dt_pivot_wider(names_from = VariableName, values_from = VariableValue) %>%
@@ -1054,6 +1054,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
 
   names(df)[1] <- 'DateTime'
 
+  print('Generating bins...')
   ## datetime is blank for histo bins and incorporates adjustments above for bins whether or not theyre provided as inputs
   if (any(df$DateTime == '')){
     bins <- df[which(df$DateTime == ''),]
