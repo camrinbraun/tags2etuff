@@ -1048,11 +1048,11 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   ## output of class etuff
   print('Generating output object.')
   #df <- returnData %>% dplyr::select(-c(VariableID, VariableUnits)) %>% tidyr::spread(VariableName, VariableValue)
-  if (any(names(returnData) %in% c('VariableID','VariableUnits'))){
-    df <- returnData %>% dplyr::select(-c(VariableID, VariableUnits)) %>% tidyfast::dt_pivot_wider(names_from = VariableName, values_from = VariableValue) %>% as.data.frame()
-  } else{
-    df <- returnData %>% tidyfast::dt_pivot_wider(names_from = VariableName, values_from = VariableValue) %>% as.data.frame()
-  }
+  df <- returnData %>% dplyr::select(-c(VariableID, VariableUnits)) %>%
+    tidyfast::dt_pivot_wider(names_from = VariableName, values_from = VariableValue) %>%
+    as.data.frame()
+
+  names(df)[1] <- 'DateTime'
 
   ## datetime is blank for histo bins and incorporates adjustments above for bins whether or not theyre provided as inputs
   if (any(df$DateTime == '')){
