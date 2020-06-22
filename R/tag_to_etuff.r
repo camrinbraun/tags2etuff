@@ -263,7 +263,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
                              colClasses = c(rep(NA,7), rep('NULL', 4)),
                              header=F)
       names(mti) <- c('DateTime', 'tempval','pressureval','lightval','temperature','depth','light')
-      mti$DateTime <- as.POSIXct(mti$DateTime, format=HMMoce::findDateFormat(mti$DateTime), tz='UTC')
+      mti$DateTime <- as.POSIXct(mti$DateTime, format=findDateFormat(mti$DateTime), tz='UTC')
       mti <- mti[which(mti$DateTime >= dates[1] & mti$DateTime <= dates[2]),]
 
       # summarize with melt
@@ -314,7 +314,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
     if (fe){
       lotek <- data.frame(readRDS('~/work/RData/FurukawaS/RegularLog_YT20070605_D2070.RDS'))
       names(lotek) <- c('DateTime', 'depth','temperature','light')
-      lotek$DateTime <- as.POSIXct(lotek$DateTime, format=HMMoce::findDateFormat(lotek$DateTime), tz='UTC')
+      lotek$DateTime <- as.POSIXct(lotek$DateTime, format=findDateFormat(lotek$DateTime), tz='UTC')
       lotek <- lotek[which(lotek$DateTime >= dates[1] & lotek$DateTime <= dates[2]),]
 
       # summarize with melt
@@ -362,7 +362,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
     if (fe){
       lotek <- data.frame(readRDS('~/work/RData/FurukawaS/DayLog_YT20070605_D2070.RDS'))
       names(lotek) <- c('DateTime', 'longitude','latitude')
-      lotek$DateTime <- as.POSIXct(lotek$DateTime, format=HMMoce::findDateFormat(lotek$DateTime), tz='UTC')
+      lotek$DateTime <- as.POSIXct(lotek$DateTime, format=findDateFormat(lotek$DateTime), tz='UTC')
       lotek <- lotek[which(lotek$DateTime > dates[1] & lotek$DateTime < dates[2]),]
 
       # summarize with melt
@@ -500,7 +500,9 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       #idx <- idx[-which(idx %in% drop_idx)]
       arch <- arch[,c(time_col, depth_col, temp_col, light_col)]
       names(arch) <- c('DateTime','depth','temperature','light')
-      arch$DateTime <- as.POSIXct(arch$DateTime, format=HMMoce::findDateFormat(arch$DateTime), tz='UTC')
+      x <- findDateFormat(arch$DateTime[1:10])
+      #arch$DateTime <- as.POSIXct(arch$DateTime, format=x, tz='UTC')
+      arch$DateTime <- lubridate::parse_date_time(arch$DateTime, orders=x, tz='UTC')
       arch.new <- arch[which(arch$DateTime >= dates[1] & arch$DateTime <= dates[2]),]
 
       #arch <- arch[which(names(arch) %in% c('Time','Depth','Temperature','Light Level'))]
@@ -515,12 +517,20 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       arch.new$VariableName <- arch.new$variable
 
       # merge with obs types and do some formatting
-      arch.new <- merge(x = arch.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+      #arch.new <- merge(x = arch.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+      arch.new <- dplyr::left_join(x = arch.new, y = obsTypes[, c("VariableID","VariableName", 'VariableUnits')], by = 'VariableName')
+
       arch.new <- arch.new[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
       names(arch.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
       arch.new <- arch.new[order(arch.new$DateTime, arch.new$VariableID),]
       arch.new <- arch.new[which(!is.na(arch.new$VariableValue)),]
-      arch.new$DateTime <- as.POSIXct(arch.new$DateTime, tz='UTC')
+
+      if (class(arch.new$DateTime[1])[1] != 'POSIXct'){
+        x <- findDateFormat(arch.new$DateTime[1:10])
+        #arch.new$DateTime <- as.POSIXct(arch.new$DateTime, tz='UTC')
+        arch.new$DateTime <- lubridate::parse_date_time(arch.new$DateTime, orders=x, tz='UTC')
+      }
+
       arch.new$DateTime <- format(arch.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
 
       if (exists('returnData')){
@@ -671,7 +681,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
 
       # if file exists we load it
       mmd <- utils::read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
-      mmd$dt <- lubridate::parse_date_time(mmd$Date, orders=HMMoce::findDateFormat(mmd$Date), tz='UTC')
+      mmd$dt <- lubridate::parse_date_time(mmd$Date, orders=findDateFormat(mmd$Date), tz='UTC')
       mmd <- mmd[which(mmd$dt >= dates[1] & mmd$dt <= dates[2]),]
 
       # organize mmd.new for flatfile format
@@ -723,7 +733,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
 
       # if file exists we load it
       sst <- utils::read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
-      sst$dt <- lubridate::parse_date_time(sst$Date, orders=HMMoce::findDateFormat(sst$Date), tz='UTC')
+      sst$dt <- lubridate::parse_date_time(sst$Date, orders=findDateFormat(sst$Date), tz='UTC')
       sst <- sst[which(sst$dt >= dates[1] & sst$dt <= dates[2]),]
 
       sst.new <- parse_sst(sst, obsTypes)
@@ -832,7 +842,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       }
 
       histo <- histo[which(!is.na(histo$Sum)),]
-      histo$dt <- lubridate::parse_date_time(histo$Date, orders=HMMoce::findDateFormat(histo$Date), tz='UTC')
+      histo$dt <- lubridate::parse_date_time(histo$Date, orders=findDateFormat(histo$Date), tz='UTC')
       histo <- histo[which(histo$dt >= dates[1] & histo$dt <= dates[2]),]
       histo <- subset(histo, select=-c(NumBins))
       #histo <- Filter(function(x)!all(is.na(x)), histo)
