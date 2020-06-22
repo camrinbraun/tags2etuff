@@ -1046,7 +1046,12 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   }
 
   ## output of class etuff
-  df <- returnData %>% dplyr::select(-c(VariableID, VariableUnits)) %>% tidyr::spread(VariableName, VariableValue)
+  #df <- returnData %>% dplyr::select(-c(VariableID, VariableUnits)) %>% tidyr::spread(VariableName, VariableValue)
+  if (any(names(returnData) %in% c('VariableID','VariableUnits'))){
+    df <- returnData %>% dplyr::select(-c(VariableID, VariableUnits)) %>% tidyfast::dt_pivot_wider(names_from = VariableName, values_from = VariableValue) %>% as.data.frame()
+  } else{
+    df <- returnData %>% tidyfast::dt_pivot_wider(names_from = VariableName, values_from = VariableValue) %>% as.data.frame()
+  }
 
   ## datetime is blank for histo bins and incorporates adjustments above for bins whether or not theyre provided as inputs
   if (any(df$DateTime == '')){
@@ -1057,7 +1062,8 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   }
   if (!exists('bins')) bins <- NULL
 
-  df$DateTime <- as.POSIXct(df$DateTime, tz='UTC')
+  #df$DateTime <- as.POSIXct(df$DateTime, tz='UTC')
+  df$DateTime <- fasttime::fastPOSIXct(df$DateTime, tz='UTC')
   df$id <- meta_row$instrument_name
 
   etuff <- list(etuff = df, meta = meta_row, bins = bins)
