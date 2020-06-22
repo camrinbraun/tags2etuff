@@ -1038,7 +1038,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       print(utils::head(returnData))
       data.table::fwrite(returnData, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
 
-      print(paste('Adding data to eTUFF file ', etuff_file, '.', sep=''))
+      print(paste('Data added to eTUFF file ', etuff_file, '.', sep=''))
 
     } else{
       stop('Must specify etuff_file if write_direct = TRUE.')
@@ -1046,6 +1046,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   }
 
   ## output of class etuff
+  print('Generating output object.')
   #df <- returnData %>% dplyr::select(-c(VariableID, VariableUnits)) %>% tidyr::spread(VariableName, VariableValue)
   if (any(names(returnData) %in% c('VariableID','VariableUnits'))){
     df <- returnData %>% dplyr::select(-c(VariableID, VariableUnits)) %>% tidyfast::dt_pivot_wider(names_from = VariableName, values_from = VariableValue) %>% as.data.frame()
