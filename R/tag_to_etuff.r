@@ -538,7 +538,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       } else {
         returnData <- arch.new
       }
-      rm(arch); rm(arch.new); gc()
+      rm(arch);  gc()#rm(arch.new);
     } # end fe
     if (exists('fe')) rm(fe)
 
