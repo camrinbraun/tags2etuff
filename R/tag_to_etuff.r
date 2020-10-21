@@ -309,7 +309,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   #--------------------------
 
   if (tagtype == 'PSAT' & manufacturer == 'Microwave'){
-    print('Reading Microwave PSAT for sunrise/sunset data...')
+    #print('Reading Microwave PSAT for sunrise/sunset data...')
 
     if (is.null(fName)) stop('fName of target XLS file must be specified if manufacturer is Microwave.')
 
@@ -365,7 +365,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   #--------------------------
 
   if (tagtype == 'PSAT' & manufacturer == 'Microwave'){
-    print('Reading Microwave PSAT for location data...')
+    #print('Reading Microwave PSAT for location data...')
 
     if (is.null(fName)) stop('fName of target XLS file must be specified if manufacturer is Microwave.')
 
@@ -430,7 +430,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   #--------------------------
 
   if (tagtype == 'PSAT' & manufacturer == 'Microwave'){
-    print('Reading Microwave PSAT for vertical data...')
+    #print('Reading Microwave PSAT for vertical data...')
 
     if (is.null(fName)) stop('fName of target XLS file must be specified if manufacturer is Microwave.')
 
