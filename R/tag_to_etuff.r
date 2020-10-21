@@ -617,7 +617,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
     if (fe){
       print('Getting PDT data...')
 
-      pdt <- HMMoce::read.wc(filename = fList[fidx], type = 'pdt', tag = dates[1], pop = dates[2])$data
+      pdt <- HMMoce::read.wc(filename = fList[fidx], type = 'pdt', tag = dates[1], pop = dates[2])
 
       # organize pdt.new for flatfile format
       pdt.new <- pdt
@@ -1120,6 +1120,8 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
         if (which(idx == zz) != 1 & !is.na(unlist(tad.lim[which(idx == zz)]))) hdb$Value[zz - 1] <- unlist(tad.lim[which(idx == zz) - 1]) + 0.1
       }
       hdb <- hdb[which(!is.na(hdb$Value)),]
+      ## if bin limit is set below zero...
+      if (hdb$Value[1] > hdb$Value[2]) hdb$Value[1] <- -10
 
       # deal with TAT bin limits
       htb <- obsTypes[grep('HistTempBin', obsTypes$VariableName), c('VariableID', 'VariableName')]
@@ -1131,6 +1133,8 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
         if (which(idx == zz) != 1 & !is.na(unlist(tat.lim[which(idx == zz)]))) htb$Value[zz - 1] <- unlist(tat.lim[which(idx == zz) - 1]) + 0.1
       }
       htb <- htb[which(!is.na(htb$Value)),]
+      ## if bin limit is set below zero...
+      if (htb$Value[1] > htb$Value[2]) htb$Value[1] <- -10
 
       # now duplicate each bin limit data frame for each time point in the histogram data
       #tat.dates <- unique(tat.new$dt)
