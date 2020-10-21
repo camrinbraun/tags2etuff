@@ -13,8 +13,9 @@ extract.light <- function(light){
 
   # convert to long format
   vars = names(light[,c(which(names(light) == 'LL0'):length(names(light)))])
-  light <- light[which(light$Type != c('Begin','End')),]
+  light <- light[which(light$Type %in% c('Dawn','Dusk')),]
   light <- light[which(light$Day != ''),]
+  #light <- which(duplicated(paste(light$Day, light$Time)))
   light <- stats::reshape(light, ids = paste(light$Day, light$Time), direction = 'long',
                  varying = vars, times = vars, sep='', timevar = 'BinNum')
   keepNames = c('Ptt', 'id', 'BinNum', 'LL', 'Depth', 'Delta', 'MinDepth','MaxDepth')
