@@ -182,31 +182,6 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       names(argos.new) <- nms
       argos.new <- argos.new[which(argos.new$date != ''),]
 
-      testDates <- function(x){
-        # first try lubridate
-        dt <- suppressWarnings(try(lubridate::as_datetime(x), TRUE))
-
-        if(any(class(dt) == 'try-error') | any(is.na(dt))){
-          # then try flipTime
-          dt <- suppressWarnings(try(flipTime::AsDateTime(x), TRUE))
-
-          if(any(class(dt) == 'try-error') | any(is.na(dt))){
-            # attempt to switch date time to time date
-            dt <- suppressWarnings(try(lubridate::parse_date_time(x, orders='HMS ymd'), TRUE))
-
-            if(any(class(dt) == 'try-error') | any(is.na(dt))){
-              # attempt to switch date time to time date
-              dt <- suppressWarnings(try(lubridate::parse_date_time(x, orders='HMS dbY'), TRUE))
-
-              if(any(class(dt) == 'try-error') | any(is.na(dt))){
-                stop('Tried lubridate, flipTime and HMS ymd orders but unable to figure out datetime format.')
-              }
-            }
-          }
-        }
-        return(dt)
-      }
-
       argos.new$date <- testDates(argos.new$date)
       #argos.new$date <- as.POSIXct(argos.new$date, format='%H:%M:%S %d-%b-%Y', tz='UTC')
       argos.new <- argos.new[which(argos.new$date > dates[1] & argos.new$date < dates[2]),]
