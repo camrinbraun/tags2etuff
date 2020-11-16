@@ -477,6 +477,8 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   if (tagtype == 'PSAT' & manufacturer == 'Lotek'){
     print('Reading Lotek PSAT for vertical data...')
 
+    stop('This tag type and manufacturer combination is not currently supported.')
+
     if (is.null(fName)) stop('fName must be specified if manufacturer is Lotek')
 
     fList <- list.files(dir, full.names = T)
@@ -524,6 +526,8 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
 
   if (tagtype == 'PSAT' & manufacturer == 'Lotek'){
     print('Reading Lotek PSAT for position data...')
+
+    stop('This tag type and manufacturer combination is not currently supported.')
 
     if (is.null(fName)) stop('fName must be specified if manufacturer is Lotek')
 
@@ -1200,6 +1204,36 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
 
   } # close WC PSAT
 
+
+  #--------------------------
+  ## LOTEK ARCHIVAL
+  #--------------------------
+
+  if (tagtype == 'archival' & manufacturer == 'Lotek'){
+    print('Reading Lotek archival tag...')
+
+    lotek <- read_lotek(dir)
+
+    #--------------------------
+    ## Lotek archival daily log
+    #--------------------------
+
+    dl <- lotek_format_dl(lotek, dates)
+
+    #--------------------------
+    ## Lotek archival time series
+    #--------------------------
+
+    ts <- lotek_format_ts(lotek, dates)
+
+
+    if (exists('returnData')){
+      returnData <- rbind(returnData, ts, dl)
+    } else {
+      returnData <- rbind(ts, dl)
+    }
+
+  }  # close Lotek archival
 
   #--------------------------
   ## FINISHED
