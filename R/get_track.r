@@ -28,6 +28,7 @@ get_track <- function(etuff, what_tz = NULL){
   idx <- which(names(tr) %in% c('latitude','longitude','latitudeError','longitudeError'))
   for (i in idx) tr[,i] <- as.numeric(tr[,i])
   tr <- tr[which(!is.na(tr$latitude)),]
+  tr <- tr %>% filter(latitude < 90 & latitude > -90)
 
   ## deal with timezones
   if (is.null(what_tz)) what_tz <- get_tz(etuff, what_tz)

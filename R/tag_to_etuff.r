@@ -3,6 +3,7 @@
 #' Convert satellite tag data to etuff. Currently this function has good support for Wildlife Computers tags and is in development for others such as Lotek and MT.
 #'
 #' @param dir is directory the target data is stored in
+#' @param meta_row is data frame with nrow == 1 containing metadata
 #' @param manufacturer is character indicating tag manufacturer. Choices are
 #'   'Wildlife','Microwave','Lotek'.
 #' @param tagtype is character. Choices are 'PSAT', 'SPOT', ...
@@ -20,7 +21,7 @@
 #'   Defaults to NULL and the function tries to read bins from the file.
 #' @param obsTypes is csv sourced from github containing the latest obsTypes
 #'   recognized by the NASA OIIP project. Usually this is left NULL and the file
-#'   is auto-magically downloaded for you. The only reason you may want to
+#'   is automatically downloaded for you. The only reason you may want to
 #'   specify this would be in order to work offline.
 #' @param check_meta is logical indicating whether or not to check the etuff file metadata
 #' @param customCols is optional argument that allows custom specification of input columns for input \code{fName}. these custom specs must match the accepted obsTypes
@@ -87,7 +88,6 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   if (manufacturer == 'unknown'){
     if(!exists('customCols')) stop('if manufacturer is unknown, customCols must be specified.')
   } else if (!(manufacturer %in% c('Microwave','Wildlife','Wildlife Computers', 'Lotek'))){
-    print('entering 2')
     stop('the specified manufacturer is not supported.')
   }
 
@@ -96,6 +96,8 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
     tagtype <- 'SPOT'
   } else if (tagtype %in% c('miniPAT','PAT','MK10','MK10AF','psat','Xtag')){
     tagtype <- 'PSAT'
+  } else if (tagtype %in% c("LAT-2810", "LTD2310", "Mk9", "LAT231")){
+    tagtype <- 'archival'
   } else if (!(tagtype %in% c('satellite','popup'))){
     stop('specified tag type is required to be either satellite or popup.')
   }
@@ -1218,13 +1220,13 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
     ## Lotek archival daily log
     #--------------------------
 
-    dl <- lotek_format_dl(lotek, dates)
+    dl <- lotek_format_dl(lotek$daylog, dates, obsTypes, meta_row)
 
     #--------------------------
     ## Lotek archival time series
     #--------------------------
 
-    ts <- lotek_format_ts(lotek, dates)
+    ts <- lotek_format_ts(lotek$timeseries, dates, obsTypes, meta_row)
 
 
     if (exists('returnData')){
