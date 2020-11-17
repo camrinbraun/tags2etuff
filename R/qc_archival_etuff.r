@@ -101,6 +101,18 @@ qc_archival_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
                             xlab='', ylab='Temperature (C)')#, main='Time-at-temperature (%)')
 
     }
+  } else if('internalTemperature' %in% names(etuff)){
+    intT <- etuff[,c('DateTime', 'internalTemperature')]
+    intT <- intT[seq(1, nrow(intT), by=50),]
+
+    extT <- etuff[,c('DateTime', 'temperature')]
+    extT <- extT[seq(1, nrow(extT), by=50),]
+
+    tad.plot <- ggplot(intT, aes(x=DateTime, y=internalTemperature, colour=internalTemperature)) +
+      geom_point() + ylab('Internal Temperature') + theme(legend.position = "none")
+    tat.plot <- ggplot(extT, aes(x=DateTime, y=temperature, colour=temperature)) +
+      geom_point() + ylab('External Temperature') + theme(legend.position = "none")
+
   } else{
     tad.plot <- ggplot() + geom_blank(aes(1,1)) +
       cowplot::theme_nothing()
@@ -112,7 +124,14 @@ qc_archival_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
   #sst <- etuff[which(etuff$VariableName == 'sst'),]
 
   sst <- etuff[,c('DateTime', names(etuff)[grep('sst', names(etuff), fixed=TRUE)])]
-  sst <- sst[,c('DateTime','sst')]
+  if ('sst' %in% names(sst)){
+    sst <- sst[,c('DateTime','sst')]
+  } else if ('sstMedian' %in% names(sst)){
+    sst <- sst[,c('DateTime','sstMedian')]
+    names(sst)[2] <- 'sst'
+  } else{
+    stop('No SST data found.')
+  }
   sst <- reshape2::melt(sst, id.vars=c('DateTime'))
   names(sst) <- c('DateTime','VariableName','VariableValue')
 
@@ -162,8 +181,10 @@ qc_archival_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
     #geom_path(data = pred, aes(x = lon, y = lat)) +
 
     ## add confidence intervals
-    m1 <- m1 + geom_ellipse(data = df, aes(x0 = longitude, y0 = latitude, a = longitudeError, b = latitudeError, angle = 0),
-                            alpha = 0.1, fill = 'grey', colour = 'grey')
+    if (all(c('longitudeError', 'latitudeError') %in% names(df))){
+      m1 <- m1 + geom_ellipse(data = df, aes(x0 = longitude, y0 = latitude, a = longitudeError, b = latitudeError, angle = 0),
+                              alpha = 0.1, fill = 'grey', colour = 'grey')
+    }
 
     ## add points on top
     m1 <- m1 + geom_point(data = df, aes(x = longitude, y = latitude, colour = DateTime))

@@ -3,6 +3,7 @@
 #' Convert satellite tag data to etuff. Currently this function has good support for Wildlife Computers tags and is in development for others such as Lotek and MT.
 #'
 #' @param dir is directory the target data is stored in
+#' @param meta_row is data frame with nrow == 1 containing metadata
 #' @param manufacturer is character indicating tag manufacturer. Choices are
 #'   'Wildlife','Microwave','Lotek'.
 #' @param tagtype is character. Choices are 'PSAT', 'SPOT', ...
@@ -20,7 +21,7 @@
 #'   Defaults to NULL and the function tries to read bins from the file.
 #' @param obsTypes is csv sourced from github containing the latest obsTypes
 #'   recognized by the NASA OIIP project. Usually this is left NULL and the file
-#'   is auto-magically downloaded for you. The only reason you may want to
+#'   is automatically downloaded for you. The only reason you may want to
 #'   specify this would be in order to work offline.
 #' @param check_meta is logical indicating whether or not to check the etuff file metadata
 #' @param customCols is optional argument that allows custom specification of input columns for input \code{fName}. these custom specs must match the accepted obsTypes
@@ -87,15 +88,16 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   if (manufacturer == 'unknown'){
     if(!exists('customCols')) stop('if manufacturer is unknown, customCols must be specified.')
   } else if (!(manufacturer %in% c('Microwave','Wildlife','Wildlife Computers', 'Lotek'))){
-    print('entering 2')
     stop('the specified manufacturer is not supported.')
   }
 
   # check and coerce allowable tag types
   if (tagtype %in% c('spot','SPOT','SPOT-F','mrPATspot','spot380','spot258','towed SPOT')){
     tagtype <- 'SPOT'
-  } else if (tagtype %in% c('miniPAT','PAT','MK10','MK10AF','psat')){
+  } else if (tagtype %in% c('miniPAT','PAT','MK10','MK10AF','psat','Xtag')){
     tagtype <- 'PSAT'
+  } else if (tagtype %in% c("LAT-2810", "LTD2310", "Mk9", "LAT231")){
+    tagtype <- 'archival'
   } else if (!(tagtype %in% c('satellite','popup'))){
     stop('specified tag type is required to be either satellite or popup.')
   }
@@ -182,31 +184,6 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       names(argos.new) <- nms
       argos.new <- argos.new[which(argos.new$date != ''),]
 
-      testDates <- function(x){
-        # first try lubridate
-        dt <- suppressWarnings(try(lubridate::as_datetime(x), TRUE))
-
-        if(any(class(dt) == 'try-error') | any(is.na(dt))){
-          # then try flipTime
-          dt <- suppressWarnings(try(flipTime::AsDateTime(x), TRUE))
-
-          if(any(class(dt) == 'try-error') | any(is.na(dt))){
-            # attempt to switch date time to time date
-            dt <- suppressWarnings(try(lubridate::parse_date_time(x, orders='HMS ymd'), TRUE))
-
-            if(any(class(dt) == 'try-error') | any(is.na(dt))){
-              # attempt to switch date time to time date
-              dt <- suppressWarnings(try(lubridate::parse_date_time(x, orders='HMS dbY'), TRUE))
-
-              if(any(class(dt) == 'try-error') | any(is.na(dt))){
-                stop('Tried lubridate, flipTime and HMS ymd orders but unable to figure out datetime format.')
-              }
-            }
-          }
-        }
-        return(dt)
-      }
-
       argos.new$date <- testDates(argos.new$date)
       #argos.new$date <- as.POSIXct(argos.new$date, format='%H:%M:%S %d-%b-%Y', tz='UTC')
       argos.new <- argos.new[which(argos.new$date > dates[1] & argos.new$date < dates[2]),]
@@ -244,7 +221,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   if (tagtype == 'PSAT' & manufacturer == 'Microwave'){
     print('Reading Microwave PSAT for vertical data...')
 
-    if (is.null(fName)) stop('fName must be specified if manufacturer is Microwave.')
+    if (is.null(fName)) stop('fName of target XLS file must be specified if manufacturer is Microwave.')
 
     fList <- list.files(dir, full.names = T)
     fidx <- grep(fName, fList)
@@ -258,16 +235,28 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
     }
 
     if (fe){
-      print(paste('Reading archival data sheet from', fName, '...'))
-      mti <- gdata::read.xls(fName, sheet='Real-Time Data', skip=2,
-                             colClasses = c(rep(NA,7), rep('NULL', 4)),
-                             header=F)
-      names(mti) <- c('DateTime', 'tempval','pressureval','lightval','temperature','depth','light')
-      mti$DateTime <- as.POSIXct(mti$DateTime, format=findDateFormat(mti$DateTime), tz='UTC')
-      mti <- mti[which(mti$DateTime >= dates[1] & mti$DateTime <= dates[2]),]
+      print(paste('Reading time series data from', fName, '...'))
+
+      depth <- gdata::read.xls(fList[fidx], sheet='Press Data', skip=1, header=T)[,1:5] # 5 cols
+      temp <- gdata::read.xls(fList[fidx], sheet='Temp Data', skip=1, header=T)[,1:5] # 5 cols
+
+      depth$Date <- as.POSIXct(depth$Date.Time, format='%m/%d/%y %H:%M', tz='UTC')
+      depth$Depth <- depth$Depth.m. * -1
+      temp$Date <- as.POSIXct(temp$Date.Time, format='%m/%d/%y %H:%M', tz='UTC')
+
+      mti <- merge(depth, temp, by='Date')
+      mti <- mti[which(mti$Date >= dates[1] & mti$Date <= dates[2]),]
+      names(mti)[1] <- 'DateTime'
+      names(mti)[3] <- 'pressure'
+      names(mti)[6] <- 'depthDelta'
+      names(mti)[7] <- 'depth'
+      names(mti)[10] <- 'temperature'
+      names(mti)[11] <- 'tempDelta'
+      mti$depthDelta <- abs(as.numeric(as.character(mti$depthDelta)))
+      mti$tempDelta <- abs(as.numeric(as.character(mti$tempDelta)))
 
       # summarize with melt
-      mti.new <- reshape2::melt(mti, id.vars=c('DateTime'), measure.vars = c('temperature','depth','light'))
+      mti.new <- reshape2::melt(mti, id.vars=c('DateTime'), measure.vars = c('temperature','depth','pressure','depthDelta','tempDelta'))
       mti.new$VariableName <- mti.new$variable
 
       # merge with obs types and do some formatting
@@ -281,6 +270,198 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
 
       # convert to positive depth values
       mti.new$VariableValue[which(mti.new$VariableName=='depth')] <- abs(mti.new$VariableValue[which(mti.new$VariableName=='depth')])
+      mti.new <- mti.new %>% filter(!is.na(VariableValue))
+
+      if (exists('returnData')){
+        returnData <- rbind(returnData, mti.new)
+      } else {
+        returnData <- mti.new
+      }
+    } # end fe
+  } # end if tagtype
+  if (exists('fe')) rm(fe)
+
+  #--------------------------
+  ## MTI PSAT - sunrise/sunset data
+  #--------------------------
+
+  if (tagtype == 'PSAT' & manufacturer == 'Microwave'){
+    #print('Reading Microwave PSAT for sunrise/sunset data...')
+
+    if (is.null(fName)) stop('fName of target XLS file must be specified if manufacturer is Microwave.')
+
+    fList <- list.files(dir, full.names = T)
+    fidx <- grep(fName, fList)
+    if (length(fidx) == 0){
+      print(paste('No Microwave data to gather using', fName, '.', sep=''))
+      fe <- FALSE
+    } else if (length(fidx) > 1){
+      stop(paste(length(fidx), 'files match', fName, 'in the current directory. Ensure there are no duplicated extensions and try again.'))
+    } else if (length(fidx) == 1){
+      fe <- TRUE
+    }
+
+    if (fe){
+      print(paste('Reading light data from', fName, '...'))
+
+      light <- gdata::read.xls(fList[fidx], sheet='Sunrise and Sunset Times', skip=1, header=T)[,1:5]
+      light$Date <- as.Date(light$Date, format='%b %d, %Y', tz='UTC')
+      names(light)[3] <- 'depthSunrise'
+      names(light)[5] <- 'depthSunset'
+      sr <- reshape2::melt(light, id.vars=c('Date', 'Sunrise.Time'), measure.vars = c('depthSunrise'))
+      sr$DateTime <- as.POSIXct(paste(sr$Date, sr$Sunrise.Time), format='%Y-%m-%d %H:%M:%S', tz='UTC')
+      ss <- reshape2::melt(light, id.vars=c('Date', 'Sunset.Time'), measure.vars = c('depthSunset'))
+      ss$DateTime <- as.POSIXct(paste(ss$Date, ss$Sunset.Time), format='%Y-%m-%d %H:%M:%S', tz='UTC')
+      light <- rbind(sr[,c('DateTime','variable','value')], ss[,c('DateTime','variable','value')])
+      light$VariableName <- light$variable
+
+      # merge with obs types and do some formatting
+      mti.new <- merge(x = light, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+      mti.new <- mti.new[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
+      names(mti.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+      mti.new <- mti.new[order(mti.new$DateTime, mti.new$VariableID),]
+      #mti.new <- mti.new[which(!is.na(mti.new$VariableValue)),]
+      mti.new$DateTime <- as.POSIXct(mti.new$DateTime, tz='UTC')
+      mti.new$DateTime <- format(mti.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+
+      # convert to positive depth values
+      mti.new$VariableValue <- abs(mti.new$VariableValue)
+      mti.new <- mti.new %>% filter(!is.na(VariableValue))
+
+      if (exists('returnData')){
+        returnData <- rbind(returnData, mti.new)
+      } else {
+        returnData <- mti.new
+      }
+    } # end fe
+  } # end if tagtype
+  if (exists('fe')) rm(fe)
+
+  #--------------------------
+  ## MTI PSAT - location estimate data
+  #--------------------------
+
+  if (tagtype == 'PSAT' & manufacturer == 'Microwave'){
+    #print('Reading Microwave PSAT for location data...')
+
+    if (is.null(fName)) stop('fName of target XLS file must be specified if manufacturer is Microwave.')
+
+    fList <- list.files(dir, full.names = T)
+    fidx <- grep(fName, fList)
+    if (length(fidx) == 0){
+      print(paste('No Microwave data to gather using', fName, '.', sep=''))
+      fe <- FALSE
+    } else if (length(fidx) > 1){
+      stop(paste(length(fidx), 'files match', fName, 'in the current directory. Ensure there are no duplicated extensions and try again.'))
+    } else if (length(fidx) == 1){
+      fe <- TRUE
+    }
+
+    if (fe){
+      print(paste('Reading location data from', fName, '...'))
+
+      locs <- gdata::read.xls(fList[fidx], sheet='Lat&Long', skip=1, header=T, stringsAsFactors=F)#[,1:6] # 6 cols
+      # dat = MWTextract(tagID = 57508, xlsfile, delta = T, minmax = F)
+      day0 = as.POSIXct(locs[3,8], format='%b %d, %Y', tz='UTC') ## tag date
+      x0 = as.numeric(locs[5,8:9])#(read_excel(xlsfile, skip = 5, sheet = 'Lat&Long', n_max = 1))[,8:9])
+      x0[2] <- x0[2] * -1
+      dayT = as.POSIXct(locs[9,8], format='%b %d, %Y', tz='UTC') ## end date
+      xT = as.numeric(locs[11,8:9])
+      xT[2] <- xT[2] * -1
+
+      ## check for lon values in east or west
+      if(any(!is.na(stringr::str_locate(names(locs)[3], 'W')))) is_west <- TRUE
+
+      locs <- locs[,1:3]
+      locs$Date <- as.POSIXct(locs$Date, format='%b %d, %Y', tz='UTC')
+      names(locs)[1:3] <- c('DateTime','latitude','longitude')
+
+      if (is_west) locs$longitude <- locs$longitude * -1
+
+      # summarize with melt
+      mti.new <- reshape2::melt(locs, id.vars=c('DateTime'), measure.vars = c('latitude','longitude'))
+      mti.new$VariableName <- mti.new$variable
+
+      # merge with obs types and do some formatting
+      mti.new <- merge(x = mti.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+      mti.new <- mti.new[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
+      names(mti.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+      mti.new <- mti.new[order(mti.new$DateTime, mti.new$VariableID),]
+      #mti.new <- mti.new[which(!is.na(mti.new$VariableValue)),]
+      mti.new$DateTime <- as.POSIXct(mti.new$DateTime, tz='UTC')
+      mti.new$DateTime <- format(mti.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+
+      mti.new <- mti.new %>% filter(!is.na(VariableValue))
+
+      if (exists('returnData')){
+        returnData <- rbind(returnData, mti.new)
+      } else {
+        returnData <- mti.new
+      }
+    } # end fe
+  } # end if tagtype
+  if (exists('fe')) rm(fe)
+
+  #--------------------------
+  ## MTI PSAT - time series data
+  #--------------------------
+
+  if (tagtype == 'PSAT' & manufacturer == 'Microwave'){
+    #print('Reading Microwave PSAT for vertical data...')
+
+    if (is.null(fName)) stop('fName of target XLS file must be specified if manufacturer is Microwave.')
+
+    fList <- list.files(dir, full.names = T)
+    fidx <- grep(fName, fList)
+    if (length(fidx) == 0){
+      print(paste('No Microwave data to gather using', fName, '.', sep=''))
+      fe <- FALSE
+    } else if (length(fidx) > 1){
+      stop(paste(length(fidx), 'files match', fName, 'in the current directory. Ensure there are no duplicated extensions and try again.'))
+    } else if (length(fidx) == 1){
+      fe <- TRUE
+    }
+
+    if (fe){
+      print(paste('Reading min max statistics from', fName, '...'))
+
+      depth_mm <- gdata::read.xls(fList[fidx], sheet='Press Data (MinMax)', skip=1, header=T)[,1:5] # 5 cols
+      temp_mm <- gdata::read.xls(fList[fidx], sheet='Temp Data (MinMax)', skip=1, header=T)[,1:5] # 5 cols
+      light_mm <- gdata::read.xls(fList[fidx], sheet='Light Data (MinMax)', skip=1, header=T)[,1:3] # 5 cols
+
+
+      depth_mm$Date <- as.POSIXct(depth_mm$Date.Time, format='%m/%d/%y', tz='UTC')
+      temp_mm$Date <- as.POSIXct(temp_mm$Date.Time, format='%m/%d/%y', tz='UTC')
+      light_mm$Date <- as.POSIXct(light_mm$Date.Time, format='%m/%d/%y', tz='UTC')
+
+      ## merge
+      mti <- merge(depth_mm, temp_mm, by='Date')
+      mti <- merge(mti, light_mm, by='Date')
+      mti <- mti[which(mti$Date >= dates[1] & mti$Date <= dates[2]),]
+      names(mti)[1] <- 'DateTime'
+      names(mti)[5] <- 'depthMin'
+      names(mti)[6] <- 'depthMax'
+      names(mti)[10] <- 'tempMin'
+      names(mti)[11] <- 'tempMax'
+      names(mti)[13] <- 'lightMin'
+      names(mti)[14] <- 'lightMax'
+      mti$depthMin <- abs(mti$depthMin)
+      mti$depthMax <- abs(mti$depthMax)
+
+      # summarize with melt
+      mti.new <- reshape2::melt(mti, id.vars=c('DateTime'), measure.vars = c('depthMin','depthMax','tempMin','tempMax','lightMin','lightMax'))
+      mti.new$VariableName <- mti.new$variable
+
+      # merge with obs types and do some formatting
+      mti.new <- merge(x = mti.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+      mti.new <- mti.new[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
+      names(mti.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+      mti.new <- mti.new[order(mti.new$DateTime, mti.new$VariableID),]
+      #mti.new <- mti.new[which(!is.na(mti.new$VariableValue)),]
+      mti.new$DateTime <- as.POSIXct(mti.new$DateTime, tz='UTC')
+      mti.new$DateTime <- format(mti.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+
+      mti.new <- mti.new %>% filter(!is.na(VariableValue))
 
       if (exists('returnData')){
         returnData <- rbind(returnData, mti.new)
@@ -297,6 +478,8 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
 
   if (tagtype == 'PSAT' & manufacturer == 'Lotek'){
     print('Reading Lotek PSAT for vertical data...')
+
+    stop('This tag type and manufacturer combination is not currently supported.')
 
     if (is.null(fName)) stop('fName must be specified if manufacturer is Lotek')
 
@@ -345,6 +528,8 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
 
   if (tagtype == 'PSAT' & manufacturer == 'Lotek'){
     print('Reading Lotek PSAT for position data...')
+
+    stop('This tag type and manufacturer combination is not currently supported.')
 
     if (is.null(fName)) stop('fName must be specified if manufacturer is Lotek')
 
@@ -1021,6 +1206,36 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
 
   } # close WC PSAT
 
+
+  #--------------------------
+  ## LOTEK ARCHIVAL
+  #--------------------------
+
+  if (tagtype == 'archival' & manufacturer == 'Lotek'){
+    print('Reading Lotek archival tag...')
+
+    lotek <- read_lotek(dir)
+
+    #--------------------------
+    ## Lotek archival daily log
+    #--------------------------
+
+    dl <- lotek_format_dl(lotek$daylog, dates, obsTypes, meta_row)
+
+    #--------------------------
+    ## Lotek archival time series
+    #--------------------------
+
+    ts <- lotek_format_ts(lotek$timeseries, dates, obsTypes, meta_row)
+
+
+    if (exists('returnData')){
+      returnData <- rbind(returnData, ts, dl)
+    } else {
+      returnData <- rbind(ts, dl)
+    }
+
+  }  # close Lotek archival
 
   #--------------------------
   ## FINISHED
