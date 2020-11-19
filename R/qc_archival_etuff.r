@@ -21,7 +21,7 @@ qc_archival_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
 
   bins <- etuff$bins
   meta <- etuff$meta
-  df <- get_track(etuff)
+  if (map) df <- get_track(etuff)
 
   etuff <- data.frame(etuff$etuff)
 
@@ -177,11 +177,12 @@ qc_archival_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
 
     ## simple map of move data
     m1 <- ggplot() + geom_polygon(data = world, aes(x=long, y = lat, group = group)) +
-      coord_fixed(xlim=xl, ylim=yl, ratio=1.3) + xlab('') + ylab('') #+
+      coord_fixed(xlim=xl, ylim=yl) + xlab('') + ylab('') #+
     #geom_path(data = pred, aes(x = lon, y = lat)) +
 
     ## add confidence intervals
     if (all(c('longitudeError', 'latitudeError') %in% names(df))){
+
       m1 <- m1 + geom_ellipse(data = df, aes(x0 = longitude, y0 = latitude, a = longitudeError, b = latitudeError, angle = 0),
                               alpha = 0.1, fill = 'grey', colour = 'grey')
     }

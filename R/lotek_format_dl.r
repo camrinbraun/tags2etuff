@@ -65,7 +65,10 @@ lotek_format_dl <- function(dl, dates, obsTypes, meta_row){
     for (ii in 1:nrow(dl)){
       if (dl$longitude[ii] == ''){
         dl$longitude[ii] <- NA
-      } else{
+      } else if (length(grep('West', dl$longitude)) > 0){
+        dl$longitude[ii] <- as.numeric(substr(dl$longitude[ii], 1,
+                                              stringr::str_locate_all(dl$longitude[ii], ' ')[[1]][1,1] - 1)) * -1
+      } else if(length(grep('East', dl$longitude)) > 0){
         dl$longitude[ii] <- as.numeric(substr(dl$longitude[ii], 1,
                                               stringr::str_locate_all(dl$longitude[ii], ' ')[[1]][1,1] - 1))
       }
@@ -131,6 +134,7 @@ lotek_format_dl <- function(dl, dates, obsTypes, meta_row){
       sr$DateTime <- testDates(paste(sr[,1], sr[,2]))
     }
     sr <- sr[,c('DateTime','depthSunrise')]
+    sr <- sr[which(sr$DateTime >= dates[1] & sr$DateTime <= dates[2]),]
 
     ## reshape sr
     sr <- reshape2::melt(sr, id.vars=c('DateTime'), measure.vars = c('depthSunrise'))
@@ -163,6 +167,7 @@ lotek_format_dl <- function(dl, dates, obsTypes, meta_row){
       ss$DateTime <- testDates(paste(ss[,1], ss[,2]))
     }
     ss <- ss[,c('DateTime','depthSunset')]
+    ss <- ss[which(ss$DateTime >= dates[1] & ss$DateTime <= dates[2]),]
 
     ## reshape ss
     ss <- reshape2::melt(ss, id.vars=c('DateTime'), measure.vars = c('depthSunset'))
