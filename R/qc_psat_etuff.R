@@ -120,8 +120,8 @@ qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
     ## get limits
     df$longitude <- as.numeric(df$longitude)
     df$latitude <- as.numeric(df$latitude)
-    df$longitudeError <- as.numeric(df$longitudeError)
-    df$latitudeError <- as.numeric(df$latitudeError)
+    if (any(names(df) %in% 'longitudeError')) df$longitudeError <- as.numeric(df$longitudeError)
+    if (any(names(df) %in% 'latitudeError')) df$latitudeError <- as.numeric(df$latitudeError)
     xl <- c(min(df$longitude) - 2, max(df$longitude) + 2)
     yl <- c(min(df$latitude) - 2, max(df$latitude) + 2)
 
@@ -131,8 +131,8 @@ qc_psat_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
     #geom_path(data = pred, aes(x = lon, y = lat)) +
 
     ## add confidence intervals
-    m1 <- m1 + geom_ellipse(data = df, aes(x0 = longitude, y0 = latitude, a = longitudeError, b = latitudeError, angle = 0),
-                            alpha = 0.1, fill = 'grey', colour = 'grey')
+    if (any(names(df) %in% 'longitudeError')) m1 <- m1 + geom_ellipse(data = df, aes(x0 = longitude, y0 = latitude, a = longitudeError, b = latitudeError, angle = 0),
+                                                                      alpha = 0.1, fill = 'grey', colour = 'grey')
 
     ## add points on top
     m1 <- m1 + geom_point(data = df, aes(x = longitude, y = latitude, colour = DateTime))

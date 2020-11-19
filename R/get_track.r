@@ -11,12 +11,14 @@ get_track <- function(etuff, what_tz = NULL){
 
   if (class(etuff) != 'etuff' & class(etuff) != 'etuff_archival') stop('Input object must be of class etuff or etuff_archival.')
 
-  meta <- etuff$meta; df <- data.frame(etuff$etuff)
+  meta <- etuff$meta;
 
   ## isolate the appropriate data
   if (class(etuff) == 'etuff_archival'){
+    df <- etuff$etuff
     tr <- archival_to_etuff(df, vars = c('DateTime','latitude','longitude','latitudeError','longitudeError','argosLC'))
   } else{
+    df <- data.frame(etuff$etuff)
     idx <- which(names(df) %in% c('DateTime','latitude','longitude','latitudeError','longitudeError','argosLC'))
     tr <- df[,idx]
   }
@@ -26,6 +28,7 @@ get_track <- function(etuff, what_tz = NULL){
   idx <- which(names(tr) %in% c('latitude','longitude','latitudeError','longitudeError'))
   for (i in idx) tr[,i] <- as.numeric(tr[,i])
   tr <- tr[which(!is.na(tr$latitude)),]
+  tr <- tr %>% filter(latitude < 90 & latitude > -90)
 
   ## deal with timezones
   if (is.null(what_tz)) what_tz <- get_tz(etuff, what_tz)
