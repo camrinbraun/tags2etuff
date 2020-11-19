@@ -98,7 +98,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
     tagtype <- 'PSAT'
   } else if (tagtype %in% c("LAT-2810", "LTD2310", "Mk9", "LAT231")){
     tagtype <- 'archival'
-  } else if (!(tagtype %in% c('satellite','popup'))){
+  } else if (!(tagtype %in% c('satellite','popup','archival'))){
     stop('specified tag type is required to be either satellite or popup.')
   }
 
@@ -577,8 +577,9 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   ## WILDLIFE COMPUTERS PSAT
   #--------------------------
 
-  if (tagtype == 'PSAT' & manufacturer == 'Wildlife'){
-    print('Reading Wildlife Computers PSAT...')
+  if ((tagtype == 'PSAT' | tagtype == 'archival') &
+      (manufacturer == 'Wildlife' | manufacturer == 'Wildlife Computers')){
+    print('Reading Wildlife Computers archival tag')
 
     #--------------------------
     ## WC PDT - depth temp profile data
@@ -631,6 +632,56 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
     } # end fe
     if (exists('fe')) rm(fe)
 
+
+    #--------------------------
+    ## WC GPE2 Light-based positions
+    #--------------------------
+
+    fList <- list.files(dir, full.names = T)
+    fidx <- grep('-GPE2.csv', fList)
+    if (length(fidx) == 0){
+      print('No GPE2 data to gather.')
+      fe <- FALSE
+    } else if (length(fidx) > 1){
+      stop(paste(length(fidx), 'files match -GPE2.csv in the current directory. Ensure there are no duplicated extensions and try again.'))
+    } else if (length(fidx) == 1){
+      fe <- TRUE
+    }
+
+    if (fe){
+      print('Getting GPE2 data...')
+
+      locs <- read.table(fList[fidx], sep=',', header=T)
+
+      # organize locs.new for flatfile format
+      nms <- names(locs)
+      nms[grep('Longitude', nms)] <- 'longitude'
+      nms[grep('Latitude', nms)] <- 'latitude'
+      nms[grep('Error.Semi.major.axis', nms)] <- 'latitudeError'
+      nms[grep('Error.Semi.minor.axis', nms)] <- 'longitudeError'
+      names(locs) <- nms
+
+      locs$latitudeError <- locs$latitudeError / 1000 / 110 # meters to degs approx
+      locs$longitudeError <- locs$longitudeError / 1000 / 110 # meters to degs approx
+
+      locs.new <- reshape2::melt(locs, id.vars=c('Date'), measure.vars = c('longitude','latitude','longitudeError','latitudeError'))
+      names(locs.new)[2] <- 'VariableName'
+
+      locs.new <- merge(x = locs.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+      locs.new <- locs.new[,c('Date','VariableID','value','VariableName','VariableUnits')]
+      names(locs.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+      locs.new$DateTime <- testDates(locs.new$DateTime)
+      #locs.new <- locs.new[order(locs.new$DateTime, locs.new$VariableID),]
+      locs.new$DateTime <- format(locs.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+      locs.new <- locs.new[which(!is.na(locs.new$VariableID)),]
+
+      if (exists('returnData')){
+        returnData <- rbind(returnData, locs.new)
+      } else {
+        returnData <- locs.new
+      }
+    } # end fe
+    if (exists('fe')) rm(fe)
 
 
     #--------------------------
@@ -1240,7 +1291,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   #--------------------------
   ## FINISHED
   #--------------------------
-  print('Cleaning up...')
+  #print('Cleaning up...')
 
   ## cleaning step to ensure no timestamp has multiple entries for the same variableid
   returnData <- distinct(returnData, DateTime, VariableName, .keep_all = TRUE)
