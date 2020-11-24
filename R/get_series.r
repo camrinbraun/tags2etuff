@@ -58,7 +58,7 @@ get_series <- function(etuff, temp_res = NULL, what_tz = NULL){
   }
 
   ## merge depth/temp series data onto what full series would look like
-  series <- dplyr::left_join(dt_vec, series, by = "DateTime_local")
+  if (class(etuff) != 'etuff_archival') series <- dplyr::left_join(dt_vec, series, by = "DateTime_local")
 
   return(series)
 }
