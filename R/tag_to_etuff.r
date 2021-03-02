@@ -6,7 +6,7 @@
 #' @param meta_row is data frame with nrow == 1 containing metadata
 #' @param manufacturer is character indicating tag manufacturer. Choices are
 #'   'Wildlife','Microwave','Lotek'.
-#' @param tagtype is character. Choices are 'PSAT', 'SPOT', ...
+#' @param tagtype is character. Choices are 'satellite', 'popup' or 'archival'. Default is to extract this from meta$model or meta$instrument_type if not specified.
 #' @param fName is character indicating the file name of interest to read. This
 #'   is currently only required for reading archival data from Microwave or Lotek
 #'   tags. It can also be used to read individual files from WC or custom inputs. See `customCols` parameter.
@@ -93,13 +93,17 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
 
   # check and coerce allowable tag types
   if (tagtype %in% c('spot','SPOT','SPOT-F','mrPATspot','spot380','spot258','towed SPOT')){
-    tagtype <- 'SPOT'
+    tagtype <- 'satellite'
   } else if (tagtype %in% c('miniPAT','PAT','MK10','MK10AF','psat','Xtag')){
-    tagtype <- 'PSAT'
+    tagtype <- 'popup'
   } else if (tagtype %in% c("LAT-2810", "LTD2310", "Mk9", "LAT231")){
     tagtype <- 'archival'
   } else if (!(tagtype %in% c('satellite','popup','archival'))){
-    stop('specified tag type is required to be either satellite or popup.')
+    tagtype <- meta_row$instrument_type
+    if (!(tagtype %in% c('satellite','popup','archival'))){
+      stop('specified model needs to match an accepted tag model or instrument_type needs to be satellite, popup or archival.')
+
+    }
   }
 
   # check dates
@@ -158,7 +162,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   #------------------------
 
 
-  if (tagtype == 'SPOT' & manufacturer == 'Wildlife'){
+  if (tagtype == 'satellite' & manufacturer == 'Wildlife'){
     # use argos-locations function - the source of this would be reflected in the metadata specific to the SPOT tag
     fList <- list.files(dir, full.names = T)
     fidx <- grep('-Locations.csv', fList)
@@ -218,7 +222,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   ## MTI PSAT - time series data
   #--------------------------
 
-  if (tagtype == 'PSAT' & manufacturer == 'Microwave'){
+  if (tagtype == 'popup' & manufacturer == 'Microwave'){
     print('Reading Microwave PSAT for vertical data...')
 
     if (is.null(fName)) stop('fName of target XLS file must be specified if manufacturer is Microwave.')
@@ -285,7 +289,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   ## MTI PSAT - sunrise/sunset data
   #--------------------------
 
-  if (tagtype == 'PSAT' & manufacturer == 'Microwave'){
+  if (tagtype == 'popup' & manufacturer == 'Microwave'){
     #print('Reading Microwave PSAT for sunrise/sunset data...')
 
     if (is.null(fName)) stop('fName of target XLS file must be specified if manufacturer is Microwave.')
@@ -341,7 +345,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   ## MTI PSAT - location estimate data
   #--------------------------
 
-  if (tagtype == 'PSAT' & manufacturer == 'Microwave'){
+  if (tagtype == 'popup' & manufacturer == 'Microwave'){
     #print('Reading Microwave PSAT for location data...')
 
     if (is.null(fName)) stop('fName of target XLS file must be specified if manufacturer is Microwave.')
@@ -406,7 +410,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   ## MTI PSAT - time series data
   #--------------------------
 
-  if (tagtype == 'PSAT' & manufacturer == 'Microwave'){
+  if (tagtype == 'popup' & manufacturer == 'Microwave'){
     #print('Reading Microwave PSAT for vertical data...')
 
     if (is.null(fName)) stop('fName of target XLS file must be specified if manufacturer is Microwave.')
@@ -476,7 +480,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   ## LOTEK PSAT - time series data
   #--------------------------
 
-  if (tagtype == 'PSAT' & manufacturer == 'Lotek'){
+  if (tagtype == 'popup' & manufacturer == 'Lotek'){
     print('Reading Lotek PSAT for vertical data...')
 
     stop('This tag type and manufacturer combination is not currently supported.')
@@ -526,7 +530,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   ## LOTEK PSAT - raw position data
   #--------------------------
 
-  if (tagtype == 'PSAT' & manufacturer == 'Lotek'){
+  if (tagtype == 'popup' & manufacturer == 'Lotek'){
     print('Reading Lotek PSAT for position data...')
 
     stop('This tag type and manufacturer combination is not currently supported.')
@@ -577,7 +581,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   ## WILDLIFE COMPUTERS PSAT
   #--------------------------
 
-  if ((tagtype == 'PSAT' | tagtype == 'archival') &
+  if ((tagtype == 'popup' | tagtype == 'archival') &
       (manufacturer == 'Wildlife' | manufacturer == 'Wildlife Computers')){
     print('Reading Wildlife Computers archival tag')
 
