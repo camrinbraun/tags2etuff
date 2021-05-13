@@ -248,19 +248,20 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       depth$Depth <- depth$Depth.m. * -1
       temp$Date <- as.POSIXct(temp$Date.Time, format='%m/%d/%y %H:%M', tz='UTC')
 
-      mti <- merge(depth, temp, by='Date')
+      mti <- merge(depth, temp, by='Date', all = TRUE)
       mti <- mti[which(mti$Date >= dates[1] & mti$Date <= dates[2]),]
       names(mti)[1] <- 'DateTime'
-      names(mti)[3] <- 'pressure'
-      names(mti)[6] <- 'depthDelta'
-      names(mti)[7] <- 'depth'
-      names(mti)[10] <- 'temperature'
-      names(mti)[11] <- 'tempDelta'
-      mti$depthDelta <- abs(as.numeric(as.character(mti$depthDelta)))
-      mti$tempDelta <- abs(as.numeric(as.character(mti$tempDelta)))
+      names(mti)[grep('Press.val', names(mti))] <- 'pressure'
+      #names(mti)[6] <- 'depthDelta'
+      names(mti)[grep('Depth.m', names(mti))] <- 'depth'
+      names(mti)[grep('Temp.C', names(mti))] <- 'temperature'
+      #names(mti)[11] <- 'tempDelta'
+      #mti$depthDelta <- abs(as.numeric(as.character(mti$depthDelta)))
+      #mti$tempDelta <- abs(as.numeric(as.character(mti$tempDelta)))
 
       # summarize with melt
-      mti.new <- reshape2::melt(mti, id.vars=c('DateTime'), measure.vars = c('temperature','depth','pressure','depthDelta','tempDelta'))
+      #mti.new <- reshape2::melt(mti, id.vars=c('DateTime'), measure.vars = c('temperature','depth','pressure','depthDelta','tempDelta'))
+      mti.new <- reshape2::melt(mti, id.vars=c('DateTime'), measure.vars = c('temperature','depth','pressure'))
       mti.new$VariableName <- mti.new$variable
 
       # merge with obs types and do some formatting
@@ -421,7 +422,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       print(paste('No Microwave data to gather using', fName, '.', sep=''))
       fe <- FALSE
     } else if (length(fidx) > 1){
-      stop(paste(length(fidx), 'files match', fName, 'in the current directory. Ensure there are no duplicated extensions and try again.'))
+      stop(paste(length(fidx), 'files match', fName, 'in the current directory. Ensure there are no duplicated extensions or filenames and try again.'))
     } else if (length(fidx) == 1){
       fe <- TRUE
     }
@@ -429,49 +430,57 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
     if (fe){
       print(paste('Reading min max statistics from', fName, '...'))
 
-      depth_mm <- gdata::read.xls(fList[fidx], sheet='Press Data (MinMax)', skip=1, header=T)[,1:5] # 5 cols
-      temp_mm <- gdata::read.xls(fList[fidx], sheet='Temp Data (MinMax)', skip=1, header=T)[,1:5] # 5 cols
-      light_mm <- gdata::read.xls(fList[fidx], sheet='Light Data (MinMax)', skip=1, header=T)[,1:3] # 5 cols
+      depth_mm <- try(gdata::read.xls(fList[fidx], sheet='Press Data (MinMax)', skip=1, header=T), TRUE)
+
+      if (class(depth_mm) == 'try-error'){
+        print('Unable to read data for min max statistics. Likely there is no sheet named Press Data (MinMax).')
+
+      } else{
+        depth_mm <- depth_mm[,1:5] # 5 cols
+
+        temp_mm <- gdata::read.xls(fList[fidx], sheet='Temp Data (MinMax)', skip=1, header=T)[,1:5] # 5 cols
+        light_mm <- gdata::read.xls(fList[fidx], sheet='Light Data (MinMax)', skip=1, header=T)[,1:3] # 5 cols
 
 
-      depth_mm$Date <- as.POSIXct(depth_mm$Date.Time, format='%m/%d/%y', tz='UTC')
-      temp_mm$Date <- as.POSIXct(temp_mm$Date.Time, format='%m/%d/%y', tz='UTC')
-      light_mm$Date <- as.POSIXct(light_mm$Date.Time, format='%m/%d/%y', tz='UTC')
+        depth_mm$Date <- as.POSIXct(depth_mm$Date.Time, format='%m/%d/%y', tz='UTC')
+        temp_mm$Date <- as.POSIXct(temp_mm$Date.Time, format='%m/%d/%y', tz='UTC')
+        light_mm$Date <- as.POSIXct(light_mm$Date.Time, format='%m/%d/%y', tz='UTC')
 
-      ## merge
-      mti <- merge(depth_mm, temp_mm, by='Date')
-      mti <- merge(mti, light_mm, by='Date')
-      mti <- mti[which(mti$Date >= dates[1] & mti$Date <= dates[2]),]
-      names(mti)[1] <- 'DateTime'
-      names(mti)[5] <- 'depthMin'
-      names(mti)[6] <- 'depthMax'
-      names(mti)[10] <- 'tempMin'
-      names(mti)[11] <- 'tempMax'
-      names(mti)[13] <- 'lightMin'
-      names(mti)[14] <- 'lightMax'
-      mti$depthMin <- abs(mti$depthMin)
-      mti$depthMax <- abs(mti$depthMax)
+        ## merge
+        mti <- merge(depth_mm, temp_mm, by='Date')
+        mti <- merge(mti, light_mm, by='Date')
+        mti <- mti[which(mti$Date >= dates[1] & mti$Date <= dates[2]),]
+        names(mti)[1] <- 'DateTime'
+        names(mti)[5] <- 'depthMin'
+        names(mti)[6] <- 'depthMax'
+        names(mti)[10] <- 'tempMin'
+        names(mti)[11] <- 'tempMax'
+        names(mti)[13] <- 'lightMin'
+        names(mti)[14] <- 'lightMax'
+        mti$depthMin <- abs(mti$depthMin)
+        mti$depthMax <- abs(mti$depthMax)
 
-      # summarize with melt
-      mti.new <- reshape2::melt(mti, id.vars=c('DateTime'), measure.vars = c('depthMin','depthMax','tempMin','tempMax','lightMin','lightMax'))
-      mti.new$VariableName <- mti.new$variable
+        # summarize with melt
+        mti.new <- reshape2::melt(mti, id.vars=c('DateTime'), measure.vars = c('depthMin','depthMax','tempMin','tempMax','lightMin','lightMax'))
+        mti.new$VariableName <- mti.new$variable
 
-      # merge with obs types and do some formatting
-      mti.new <- merge(x = mti.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
-      mti.new <- mti.new[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
-      names(mti.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
-      mti.new <- mti.new[order(mti.new$DateTime, mti.new$VariableID),]
-      #mti.new <- mti.new[which(!is.na(mti.new$VariableValue)),]
-      mti.new$DateTime <- as.POSIXct(mti.new$DateTime, tz='UTC')
-      mti.new$DateTime <- format(mti.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+        # merge with obs types and do some formatting
+        mti.new <- merge(x = mti.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+        mti.new <- mti.new[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
+        names(mti.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+        mti.new <- mti.new[order(mti.new$DateTime, mti.new$VariableID),]
+        #mti.new <- mti.new[which(!is.na(mti.new$VariableValue)),]
+        mti.new$DateTime <- as.POSIXct(mti.new$DateTime, tz='UTC')
+        mti.new$DateTime <- format(mti.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
 
-      mti.new <- mti.new %>% filter(!is.na(VariableValue))
+        mti.new <- mti.new %>% filter(!is.na(VariableValue))
 
-      if (exists('returnData')){
-        returnData <- rbind(returnData, mti.new)
-      } else {
-        returnData <- mti.new
-      }
+        if (exists('returnData')){
+          returnData <- rbind(returnData, mti.new)
+        } else {
+          returnData <- mti.new
+        }
+      } # end else
     } # end fe
   } # end if tagtype
   if (exists('fe')) rm(fe)
@@ -583,7 +592,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
 
   if ((tagtype == 'popup' | tagtype == 'archival') &
       (manufacturer == 'Wildlife' | manufacturer == 'Wildlife Computers')){
-    print('Reading Wildlife Computers archival tag')
+    print('Reading Wildlife Computers popup or archival tag')
 
     #--------------------------
     ## WC PDT - depth temp profile data
