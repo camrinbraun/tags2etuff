@@ -9,57 +9,125 @@
 #'   is automatically downloaded for you. The only reason you may want to
 #'   specify this would be in order to work offline.
 #' @param meta_row is data frame with nrow == 1 containing metadata
+#' @param hemisphere is character indicating whether you expect your animals movements to be in the northern (N) or southern (S) hemisphere. Choices are "N" or "S".
 #' @export
 
-lotek_format_dl <- function(dl, dates, obsTypes, meta_row){
+lotek_format_dl <- function(dl, dates, obsTypes, meta_row, hemisphere='N'){
+
+  if (!(hemisphere %in% c('N','S'))) stop('hemisphere must be either N or S')
 
   measure.vars <- c()
 
   ## rename to standard names
   sst_idx <- which(names(dl) %in% c('SSTMin'))
   names(dl)[sst_idx] <- 'sstMin'; rm(sst_idx)
-  if (any(names(dl) %in% 'sstMin'))
+  if (any(names(dl) %in% 'sstMin')){
     measure.vars[length(measure.vars) + 1] <- 'sstMin'
+  }
 
   sst_idx <- which(names(dl) %in% c('SSTMedian'))
   names(dl)[sst_idx] <- 'sstMedian'; rm(sst_idx)
-  if (any(names(dl) %in% 'sstMedian'))
+  if (any(names(dl) %in% 'sstMedian')){
     measure.vars[length(measure.vars) + 1] <- 'sstMedian'
+  }
 
   sst_idx <- which(names(dl) %in% c('SSTMax'))
   names(dl)[sst_idx] <- 'sstMax'; rm(sst_idx)
-  if (any(names(dl) %in% 'sstMax'))
+  if (any(names(dl) %in% 'sstMax')){
     measure.vars[length(measure.vars) + 1] <- 'sstMax'
-
-  sst_idx <- which(names(dl) %in% c('SST1[C]','SST1.C.'))
-  names(dl)[sst_idx] <- 'sst'
-  if (any(names(dl) %in% 'sst'))
-    measure.vars[length(measure.vars) + 1] <- 'sst'
-
-  temp_idx <- which(names(dl) %in% c('MaxTemp'))
-  names(dl)[temp_idx] <- 'tempMax'
-  if (any(names(dl) %in% 'tempMax'))
-    measure.vars[length(measure.vars) + 1] <- 'tempMax'
-
-  if (any(names(dl) %in% c('SST1Depth[dBars]'))){
-    dl$`SST1Depth[dBars]` <- oce::swDepth(dl$`SST1Depth[dBars]`, as.numeric(meta_row$geospatial_lat_start))
-  } else if(any(names(dl) %in% c('SST1Depth.dBars.'))){
-    dl$`SST1Depth.dBars.` <- oce::swDepth(dl$`SST1Depth.dBars.`, as.numeric(meta_row$geospatial_lat_start))
   }
-  dep_idx <- which(names(dl) %in% c('SST1Depth[dBars]',	'SST1Depth.dBars.', 'DepthForSST'))
+
+  sst_idx <- which(names(dl) %in% c('SST1[C]','SST1.C.','SST_Aquatic_[C]','SST_Aquatic_.C.'))
+  names(dl)[sst_idx] <- 'sst'
+  if (any(names(dl) %in% 'sst')){
+    measure.vars[length(measure.vars) + 1] <- 'sst'
+  }
+
+  temp_idx <- which(names(dl) %in% c('MinExtTemp_[C]','MinExtTemp_.C.'))
+  names(dl)[temp_idx] <- 'tempMin'
+  if (any(names(dl) %in% 'tempMin')){
+    measure.vars[length(measure.vars) + 1] <- 'tempMin'
+  }
+
+  temp_idx <- which(names(dl) %in% c('MaxExtTemp_[C]','MaxTemp','MaxExtTemp_.C.'))
+  names(dl)[temp_idx] <- 'tempMax'
+  if (any(names(dl) %in% 'tempMax')){
+    measure.vars[length(measure.vars) + 1] <- 'tempMax'
+  }
+
+  dep_idx <- which(names(dl) %in% c('SST1Depth[dBars]',	'SST1Depth.dBars.', 'DepthForSST','SST_Aquatic_Pressure_[dBar]','SST_Aquatic_Pressure_.dBar.'))
   names(dl)[dep_idx] <- 'sstDepth'; rm(dep_idx)
-  if (any(names(dl) %in% 'sstDepth'))
+  if (any(names(dl) %in% 'sstDepth')){
+    dl$sstDepth <- oce::swDepth(dl$sstDepth, as.numeric(meta_row$geospatial_lat_start))
     measure.vars[length(measure.vars) + 1] <- 'sstDepth'
+  }
 
-  lat_idx <- which(names(dl) %in% c('Latitude[degs]',	'Latitude.degs.', 'Latitude(-3.44elevation)', 'Latitude..3.44elevation.'))
-  names(dl)[lat_idx] <- 'latitude'
-  if (any(names(dl) %in% 'latitude'))
+  lat_idx <- which(names(dl) %in% c("LatN_.deg.", "LatS_.deg."))
+  if (length(lat_idx) >= 1){
+    if (hemisphere == 'N'){
+      lat_idx <- which(names(dl) %in% c("LatN_.deg."))
+      names(dl)[lat_idx] <- 'latitude'
+      print('Using movement data from the northern hemisphere. If that is incorrect, see the hemisphere input argument.')
+
+      lat_err_idx <- which(names(dl) %in% c("LatErrN_.deg."))
+      names(dl)[lat_err_idx] <- 'latitudeError'
+      if (any(names(dl) %in% 'latitudeError')){
+        measure.vars[length(measure.vars) + 1] <- 'latitudeError'
+      }
+
+    } else if (hemisphere == 'S'){
+      lat_idx <- which(names(dl) %in% c("LatS_.deg."))
+      names(dl)[lat_idx] <- 'latitude'
+      print('Using movement data from the southern hemisphere. If that is incorrect, see the hemisphere input argument.')
+
+      lat_err_idx <- which(names(dl) %in% c("LatErrS_.deg."))
+      names(dl)[lat_err_idx] <- 'latitudeError'
+      if (any(names(dl) %in% 'latitudeError')){
+        measure.vars[length(measure.vars) + 1] <- 'latitudeError'
+      }
+    }
     measure.vars[length(measure.vars) + 1] <- 'latitude'
+  } else{
+    lat_idx <- which(names(dl) %in% c('Latitude[degs]',	'Latitude.degs.', 'Latitude(-3.44elevation)', 'Latitude..3.44elevation.'))
+    names(dl)[lat_idx] <- 'latitude'
+    if (any(names(dl) %in% 'latitude')){
+      measure.vars[length(measure.vars) + 1] <- 'latitude'
+    }
+  }
 
-  lon_idx <- which(names(dl) %in% c('Longitude[degs]', 'Longitude.degs.', 'Longitude'))
-  names(dl)[lon_idx] <- 'longitude'
-  if (any(names(dl) %in% 'longitude'))
+  lon_idx <- which(names(dl) %in% c("LonN_.deg.", "LonS_.deg."))
+  if (length(lon_idx) >= 1){
+    if (hemisphere == 'N'){
+      lon_idx <- which(names(dl) %in% c("LonN_.deg."))
+      names(dl)[lon_idx] <- 'longitude'
+      print('Using movement data from the northern hemisphere. If that is incorrect, see the hemisphere input argument.')
+
+      lon_err_idx <- which(names(dl) %in% c("LonErrN_.deg."))
+      names(dl)[lon_err_idx] <- 'longitudeError'
+      if (any(names(dl) %in% 'longitudeError')){
+        measure.vars[length(measure.vars) + 1] <- 'longitudeError'
+      }
+
+    } else if (hemisphere == 'S'){
+      lon_idx <- which(names(dl) %in% c("LonS_.deg."))
+      names(dl)[lon_idx] <- 'longitude'
+      print('Using movement data from the southern hemisphere. If that is incorrect, see the hemisphere input argument.')
+
+      lon_err_idx <- which(names(dl) %in% c("LonErrS_.deg."))
+      names(dl)[lon_err_idx] <- 'longitudeError'
+      if (any(names(dl) %in% 'longitudeError')){
+        measure.vars[length(measure.vars) + 1] <- 'longitudeError'
+      }
+    }
     measure.vars[length(measure.vars) + 1] <- 'longitude'
+
+  } else{
+    lon_idx <- which(names(dl) %in% c('Longitude[degs]', 'Longitude.degs.', 'Longitude'))
+    names(dl)[lon_idx] <- 'longitude'
+    if (any(names(dl) %in% 'longitude')){
+      measure.vars[length(measure.vars) + 1] <- 'longitude'
+    }
+  }
 
   if (length(grep('West', dl$longitude)) > 0 | length(grep('East', dl$longitude)) > 0){
     for (ii in 1:nrow(dl)){
@@ -88,33 +156,29 @@ lotek_format_dl <- function(dl, dates, obsTypes, meta_row){
     dl$latitude <- as.numeric(dl$latitude)
   }
 
-
-  if (any(names(dl) %in% c('MinPress[dBars]'))){
-    dl$`MinPress[dBars]` <- oce::swDepth(dl$`MinPress[dBars]`, as.numeric(meta_row$geospatial_lat_start))
-  } else if(any(names(dl) %in% c('MinPress.dBars.'))){
-    dl$`MinPress.dBars.` <- oce::swDepth(dl$`MinPress.dBars.`, as.numeric(meta_row$geospatial_lat_start))
-  }
   dep_idx <- which(names(dl) %in% c('MinPress[dBars]', 'MinPress.dBars.', 'MinDepth'))
   names(dl)[dep_idx] <- 'depthMin'; rm(dep_idx)
-  if (any(names(dl) %in% 'depthMin'))
+  if (any(names(dl) %in% 'depthMin')){
+    dl$depthMin <- oce::swDepth(dl$depthMin, as.numeric(meta_row$geospatial_lat_start))
     measure.vars[length(measure.vars) + 1] <- 'depthMin'
-
-  if (any(names(dl) %in% c('MaxPress[dBars]'))){
-    dl$`MaxPress[dBars]` <- oce::swDepth(dl$`MaxPress[dBars]`, as.numeric(meta_row$geospatial_lat_start))
-  } else if(any(names(dl) %in% c('MaxPress.dBars.'))){
-    dl$`MaxPress.dBars.` <- oce::swDepth(dl$`MaxPress.dBars.`, as.numeric(meta_row$geospatial_lat_start))
   }
-  dep_idx <- which(names(dl) %in% c('MaxPress[dBars]', 'MaxPress.dBars.', 'MaxDepth'))
-  names(dl)[dep_idx] <- 'depthMax'
-  if (any(names(dl) %in% 'depthMax'))
-    measure.vars[length(measure.vars) + 1] <- 'depthMax'
 
-  if (any(names(dl) %in% 'sst'))
+  dep_idx <- which(names(dl) %in% c('MaxPress[dBars]', 'MaxPress.dBars.', 'MaxDepth','MaxPressure_[dBar]','MaxPressure_.dBar.'))
+  names(dl)[dep_idx] <- 'depthMax'
+  if (any(names(dl) %in% 'depthMax')){
+    dl$depthMax <- oce::swDepth(dl$depthMax, as.numeric(meta_row$geospatial_lat_start))
+    measure.vars[length(measure.vars) + 1] <- 'depthMax'
+  }
+
+  if (any(names(dl) %in% 'sst')){
     dl$sst[which(dl$sst < -2 | dl$sst > 36)] <- NA
-  if (any(names(dl) %in% 'sstDepth'))
+  }
+  if (any(names(dl) %in% 'sstDepth')){
     dl$sstDepth[which(dl$sstDepth > 100)] <- NA
-  if (any(names(dl) %in% 'depthMax'))
+  }
+  if (any(names(dl) %in% 'depthMax')){
     dl$depthMax[which(dl$depthMax > 3000)] <- NA
+  }
 
   ## sunrise
   if (any(names(dl) %in% c('Sunrise', 'SunriseUTC'))){
@@ -182,22 +246,31 @@ lotek_format_dl <- function(dl, dates, obsTypes, meta_row){
 
   }
 
-  day_idx <- which(names(dl) %in% c('Date', 'MissionDate'))
-  names(dl)[day_idx] <- 'Date'
+  dt_idx <- which(names(dl) %in% c('DateTime', 'Date/Time','Date.Time'))
+  names(dl)[dt_idx] <- 'DateTime'
+  if (length(dt_idx) == 1){ ## use combined datetime
+    dl <- dl[which(dl$DateTime != '' & !is.na(dl$DateTime)),]
+    dl$DateTime <- testDates(dl$DateTime)
+  } else{ ## deal with separate date and time
+    day_idx <- which(names(dl) %in% c('Date', 'MissionDate'))
+    names(dl)[day_idx] <- 'Date'
+    if (any(names(dl) %in% 'Date')){
+      ## deal with dates
+      dl <- dl[which(dl$Date != '' & !is.na(dl$Date)),]
+    }
 
-  ## deal with dates
-  dl <- dl[which(dl$Date != '' & !is.na(dl$Date)),]
-
-  time_idx <- which(names(dl) %in% c('Time'))
-  if (length(time_idx) > 0){
-    dl$DateTime <- testDates(paste(dl$Date, dl$Time))
-  } else{
-    dl$DateTime <- testDates(paste(dl$Date, '00:00:00'))
+    time_idx <- which(names(dl) %in% c('Time'))
+    names(dl)[time_idx] <- 'Time'
+    if (any(names(dl) %in% 'Time')){
+      dl$DateTime <- testDates(paste(dl$Date, dl$Time))
+    } else{
+      dl$DateTime <- testDates(paste(dl$Date, '00:00:00'))
+    }
   }
 
-  if (all(dl$DateTime < dates[1]) | all(dl$DateTime > dates[2]))
+  if (all(dl$DateTime < dates[1]) | all(dl$DateTime > dates[2])){
     stop('Error parsing time series dates.')
-  #measure.vars[length(measure.vars) + 1] <- 'DateTime'
+  }
 
   nms <- names(dl)
   warning('The following variables are NOT being included in the resulting eTUFF file:')
@@ -205,8 +278,7 @@ lotek_format_dl <- function(dl, dates, obsTypes, meta_row){
 
   ## filter (dates, bad data, etc)
   dl.new <- dl[which(dl$DateTime >= dates[1] & dl$DateTime <= dates[2]),]
-  dl.new <- dl.new %>% filter()
-
+  #dl.new <- dl.new %>% filter()
 
   ## reshape
   dl.new <- reshape2::melt(dl.new, id.vars=c('DateTime'), measure.vars = measure.vars)
@@ -228,6 +300,7 @@ lotek_format_dl <- function(dl, dates, obsTypes, meta_row){
   dl.new$DateTime <- format(dl.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
   dl.new <- dl.new[which(!is.na(dl.new$VariableValue)),]
   dl.new <- dl.new[which(dl.new$VariableValue != ' '),]
+  dl.new <- dl.new %>% distinct(DateTime, VariableID, VariableValue, VariableName, VariableUnits) %>% as.data.frame()
 
   return(dl.new)
 }

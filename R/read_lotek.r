@@ -17,9 +17,25 @@ read_lotek <- function(dir){
   #=======================
   print('Reading time series...')
 
-  if (length(grep('_00.csv', fList)) == 1){
-    series_file <- fList[grep('_00.csv', fList)]
+  if (length(grep('_00.csv', fList)) == 1 | length(grep('Dive Log.csv', fList)) == 1){
+
+    if(length(grep('_00.csv', fList)) == 1) series_file <- fList[grep('_00.csv', fList)]
+    if(length(grep('Dive Log.csv', fList)) == 1) series_file <- fList[grep('Dive Log.csv', fList)]
+
     ts <- data.table::fread(series_file, sep = ',', header = T)
+
+    if(length(grep('Dive Log.csv', fList)) == 1){
+      ## read header separate in case there are non-UTF chars
+      x <- scan(series_file, what = character(), sep=',', nmax = 100)
+      Encoding(x) <- "UTF-8"
+      x <- iconv(x, "UTF-8", "UTF-8",sub='')
+      hdr <- x[1:4]
+      if (length(hdr) != ncol(ts)) hdr <- c(hdr, 'unknown')
+      hdr <- gsub(" ", "", hdr, fixed = TRUE)
+
+      names(ts) <- hdr
+
+    }
 
     ## check for ts and dl logs being backwards from expected
     check_switch <- TRUE
@@ -42,9 +58,11 @@ read_lotek <- function(dir){
   #=======================
   print('Reading daily log...')
 
-  if (length(grep('_01.csv', fList)) == 1){
-    daylog_file <- fList[grep('_01.csv', fList)]
-    #dl <- read.table(daylog_file, sep = ',', header = F, nrows = 10, blank.lines.skip = F, stringsAsFactors = F)
+  if (length(grep('_01.csv', fList)) == 1 | length(grep('Day Log.csv', fList)) == 1){
+
+    if(length(grep('_01.csv', fList)) == 1) daylog_file <- fList[grep('_01.csv', fList)]
+    if(length(grep('Day Log.csv', fList)) == 1) daylog_file <- fList[grep('Day Log.csv', fList)]
+
     dl <- data.table::fread(daylog_file, sep = ',', skip = 1)#, header = F, nrows = 10, blank.lines.skip = F, stringsAsFactors = F)
 
     ## read header separate in case there are non-UTF chars
@@ -57,6 +75,8 @@ read_lotek <- function(dir){
       start <- grep('Rec #', x, ignore.case = T)
     } else if (length(grep('Mission Date', x, ignore.case = T)) != 0){
       start <- grep('Mission Date', x, ignore.case = T)
+    } else{
+      start <- 1
     }
 
     ## get end char

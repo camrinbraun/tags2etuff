@@ -1272,11 +1272,11 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
 
 
   #--------------------------
-  ## LOTEK ARCHIVAL
+  ## LOTEK ARCHIVAL OR PSAT
   #--------------------------
 
-  if (tagtype == 'archival' & manufacturer == 'Lotek'){
-    print('Reading Lotek archival tag...')
+  if ((tagtype == 'archival' | tagtype == 'popup') & manufacturer == 'Lotek'){
+    print('Reading Lotek archival or pop up archival tag...')
 
     lotek <- read_lotek(dir)
 

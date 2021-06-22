@@ -95,12 +95,12 @@ read_archival <- function(etuff_file, header = TRUE, metaTypes = NULL){
   names(df)[1] <- 'DateTime'
 
   ## datetime is blank for histo bins
-  if (any(df$DateTime == '' | is.na(df$DateTime))){
-    bins <- df[which(df$DateTime == '' | is.na(df$DateTime)),]
+  if (any(is.na(df$DateTime))){
+    bins <- df[which(is.na(df$DateTime)),]
     drop_idx <- which(apply(bins, 2, FUN=function(x) all(is.na(x) | x == '')))
     bins <- bins[,-drop_idx]
     bins <- bins %>% tidyr::spread(VariableName, VariableValue)
-    df <- df[which(df$DateTime != ''),]
+    df <- df[which(!is.na(df$DateTime)),]
   }
 
   #df$DateTime <- as.POSIXct(df$DateTime, tz='UTC')
