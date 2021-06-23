@@ -15,7 +15,7 @@ interp_track <- function(etuff_file,...){
   etuff <- read_archival(etuff_file)
 
   ## read whatever track data is in the etuff file
-  track <- get_track(etuff)
+  track <- get_track(etuff,...)
 
   ## temporal res of output track
   if('res_out' %in% args){
