@@ -121,7 +121,6 @@ interp_track <- function(etuff_file,...){
 
     ## fix temporal resolution if doesnt match desired output
     if (res_in < res_out | res_in > res_out){
-      log_info(paste0('Input PSAT track resolution (', res_in, ' hours) is not equal to desired output (', res_out, ' hours). Coercing using interpolation method ', interp_method, '...'))
 
       track$instrument_name <- etuff$meta$instrument_name
 
@@ -130,6 +129,8 @@ interp_track <- function(etuff_file,...){
       } else{
         interp_method <- 'interval'
       }
+
+      log_info(paste0('Input PSAT track resolution (', res_in, ' hours) is not equal to desired output (', res_out, ' hours). Coercing using interpolation method ', interp_method, '...'))
 
       if (interp_method == 'SSM'){
         track$lc <- rep('GL', length.out = nrow(tr))

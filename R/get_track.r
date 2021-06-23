@@ -7,7 +7,7 @@
 #' @return a dataframe of lat/lon and (sometimes) associated error
 #' @export
 
-get_track <- function(etuff, what_tz = NULL){
+get_track <- function(etuff, what_tz = NULL,...){
 
   if (class(etuff) != 'etuff' & class(etuff) != 'etuff_archival') stop('Input object must be of class etuff or etuff_archival.')
 
