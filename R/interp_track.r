@@ -98,7 +98,8 @@ interp_track <- function(etuff_file,...){
     tr <- plocs[,c('date','lat','lon','y.se','x.se')]
     names(tr) <- c('DateTime','latitude','longitude','latitudeError','longitudeError')
     tr$instrument_name <- etuff$meta$instrument_name
-    tr <- tr %>% select(c('instrument_name', 'DateTime','latitude','latitudeError','longitude','longitudeError')) %>% as.data.frame()
+    tr$platform <- etuff$meta$platform
+    tr <- tr %>% select(c('instrument_name', 'platform','DateTime','latitude','latitudeError','longitude','longitudeError')) %>% as.data.frame()
 
     ## approx error in dec degrees from meters
     tr$latitudeError <- tr$latitudeError / 110
@@ -194,7 +195,8 @@ interp_track <- function(etuff_file,...){
         tr <- plocs[,c('date','lat','lon','y.se','x.se')]
         names(tr) <- c('DateTime','latitude','longitude','latitudeError','longitudeError')
         tr$instrument_name <- etuff$meta$instrument_name
-        tr <- tr %>% select(c('instrument_name', 'DateTime','latitude','latitudeError','longitude','longitudeError'))
+        tr$platform <- etuff$meta$platform
+        tr <- tr %>% select(c('instrument_name', 'platform','DateTime','latitude','latitudeError','longitude','longitudeError')) %>% as.data.frame()
 
         ## approx error in dec degrees from meters
         tr$latitudeError <- tr$latitudeError / 110
@@ -205,7 +207,8 @@ interp_track <- function(etuff_file,...){
         date_idx <- findInterval(track$DateTime, date_vec)
         tr <- track[!duplicated(date_idx),]
         tr$instrument_name <- etuff$meta$instrument_name
-        tr <- tr %>% select(c('instrument_name', 'DateTime','latitude','latitudeError','longitude','longitudeError'))
+        tr$platform <- etuff$meta$platform
+        tr <- tr %>% select(c('instrument_name', 'platform','DateTime','latitude','latitudeError','longitude','longitudeError')) %>% as.data.frame()
       }
 
     } else if(res_in == res_out){
