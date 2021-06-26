@@ -97,7 +97,8 @@ interp_track <- function(etuff_file,...){
 
     tr <- plocs[,c('date','lat','lon','y.se','x.se')]
     names(tr) <- c('DateTime','latitude','longitude','latitudeError','longitudeError')
-    tr <- tr %>% select(c('DateTime','latitude','latitudeError','longitude','longitudeError')) %>% as.data.frame()
+    tr$instrument_name <- etuff$meta$instrument_name
+    tr <- tr %>% select(c('instrument_name', 'DateTime','latitude','latitudeError','longitude','longitudeError')) %>% as.data.frame()
 
     ## approx error in dec degrees from meters
     tr$latitudeError <- tr$latitudeError / 110
@@ -114,7 +115,7 @@ interp_track <- function(etuff_file,...){
     ## if no temporal resolution is specified, try to detect it (this should nearly always work with a PSAT tag)
     if (!('res_in' %in% args)){
       res_in <- Mode(as.numeric(diff(tr$DateTime), units='hours'))
-      log_info(paste('No temporal resolution specified. Mode of diff(timeseries) yielded ', res_in, 'hours', sep=''))
+      log_info(paste('No temporal resolution specified. Mode of diff(timeseries) yielded ', res_in, ' hours', sep=''))
     } else{
       log_info(paste('Using specified ', res_in, 'hours as the input of the PSAT track data.', sep=''))
     }
@@ -122,7 +123,7 @@ interp_track <- function(etuff_file,...){
     ## fix temporal resolution if doesnt match desired output
     if (res_in < res_out | res_in > res_out){
 
-      track$instrument_name <- etuff$meta$instrument_name
+      tr$instrument_name <- etuff$meta$instrument_name
 
       if ('interp_method' %in% args){
         interp_method <- args$interp_method
@@ -133,8 +134,8 @@ interp_track <- function(etuff_file,...){
       log_info(paste0('Input PSAT track resolution (', res_in, ' hours) is not equal to desired output (', res_out, ' hours). Coercing using interpolation method ', interp_method, '...'))
 
       if (interp_method == 'SSM'){
-        track$lc <- rep('GL', length.out = nrow(tr))
-        tr <- track %>% select(instrument_name, DateTime, lc, longitude, latitude, longitudeError, latitudeError)
+        tr$lc <- rep('GL', length.out = nrow(tr))
+        tr <- tr %>% select(instrument_name, DateTime, lc, longitude, latitude, longitudeError, latitudeError)
         names(tr) <- c('id','date','lc','lon','lat','lonerr','laterr')
 
         time_step = 12
@@ -192,7 +193,8 @@ interp_track <- function(etuff_file,...){
 
         tr <- plocs[,c('date','lat','lon','y.se','x.se')]
         names(tr) <- c('DateTime','latitude','longitude','latitudeError','longitudeError')
-        tr <- tr %>% select(c('DateTime','latitude','latitudeError','longitude','longitudeError'))
+        tr$instrument_name <- etuff$meta$instrument_name
+        tr <- tr %>% select(c('instrument_name', 'DateTime','latitude','latitudeError','longitude','longitudeError'))
 
         ## approx error in dec degrees from meters
         tr$latitudeError <- tr$latitudeError / 110
@@ -202,7 +204,8 @@ interp_track <- function(etuff_file,...){
         date_vec <- seq.POSIXt(track$DateTime[1], track$DateTime[nrow(track)], by=paste0(res_out, ' hours'))
         date_idx <- findInterval(track$DateTime, date_vec)
         tr <- track[!duplicated(date_idx),]
-        tr <- tr %>% select(c('DateTime','latitude','latitudeError','longitude','longitudeError'))
+        tr$instrument_name <- etuff$meta$instrument_name
+        tr <- tr %>% select(c('instrument_name', 'DateTime','latitude','latitudeError','longitude','longitudeError'))
       }
 
     } else if(res_in == res_out){
