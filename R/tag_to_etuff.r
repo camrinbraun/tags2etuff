@@ -241,8 +241,25 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
     if (fe){
       print(paste('Reading time series data from', fName, '...'))
 
-      depth <- gdata::read.xls(fList[fidx], sheet='Press Data', skip=1, header=T)[,1:5] # 5 cols
-      temp <- gdata::read.xls(fList[fidx], sheet='Temp Data', skip=1, header=T)[,1:5] # 5 cols
+      xl_type <- readxl::excel_format(fList[fidx])
+      if (xl_type == 'xls'){
+        depth <- gdata::read.xls(fList[fidx], sheet='Press Data', skip=1, header=T)[,1:5] # 5 cols
+        temp <- gdata::read.xls(fList[fidx], sheet='Temp Data', skip=1, header=T)[,1:5] # 5 cols
+
+      } else if (xl_type == 'xlsx'){
+        depth <- openxlsx::read.xlsx(fList[fidx], sheet='Press Data', startRow = 2)[,1:5] # 5 cols
+        temp <- openxlsx::read.xlsx(fList[fidx], sheet='Temp Data', startRow = 2)[,1:5] # 5 cols
+
+      } else{
+        stop("Error: something bad happened when trying to parse the MT file as xls or xlsx. Are you sure you're providing one of these file types?")
+      }
+
+      ## unfortunately the tidyverse version, readxl 1.3.1, is too unreliable so we're skipping it for now
+      #depth <- readxl::read_excel(fList[fidx], sheet='Press Data', skip=1)[,1:5]
+      #temp <- readxl::read_excel(fList[fidx], sheet='Temp Data', skip=1)[,1:5]
+
+      names(depth) <- c('Date.Time','Press.val.','Gain','Depth.m.','Delta.val.')
+      names(temp) <- c('Date.Time','Temp.val.','Temp.C.','Delta.val.','DeltaLim.Temp')
 
       depth$Date <- as.POSIXct(depth$Date.Time, format='%m/%d/%y %H:%M', tz='UTC')
       depth$Depth <- depth$Depth.m. * -1
@@ -309,10 +326,19 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
     if (fe){
       print(paste('Reading light data from', fName, '...'))
 
-      light <- gdata::read.xls(fList[fidx], sheet='Sunrise and Sunset Times', skip=1, header=T)[,1:5]
+      xl_type <- readxl::excel_format(fList[fidx])
+      if (xl_type == 'xls'){
+        light <- gdata::read.xls(fList[fidx], sheet='Sunrise and Sunset Times', skip=1, header=T)[,1:5]
+
+      } else if (xl_type == 'xlsx'){
+        light <- openxlsx::read.xlsx(fList[fidx], sheet='Sunrise and Sunset Times', startRow = 2)[,1:5] # 5 cols
+
+      } else{
+        stop("Error: something bad happened when trying to parse the MT file as xls or xlsx. Are you sure you're providing one of these file types?")
+      }
+      names(light) <- c('Date', 'Sunrise.Time', 'depthSunrise','Sunset.Time', 'depthSunset')
       light$Date <- as.Date(light$Date, format='%b %d, %Y', tz='UTC')
-      names(light)[3] <- 'depthSunrise'
-      names(light)[5] <- 'depthSunset'
+
       sr <- reshape2::melt(light, id.vars=c('Date', 'Sunrise.Time'), measure.vars = c('depthSunrise'))
       sr$DateTime <- as.POSIXct(paste(sr$Date, sr$Sunrise.Time), format='%Y-%m-%d %H:%M:%S', tz='UTC')
       ss <- reshape2::melt(light, id.vars=c('Date', 'Sunset.Time'), measure.vars = c('depthSunset'))
@@ -365,20 +391,43 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
     if (fe){
       print(paste('Reading location data from', fName, '...'))
 
-      locs <- gdata::read.xls(fList[fidx], sheet='Lat&Long', skip=1, header=T, stringsAsFactors=F)#[,1:6] # 6 cols
-      # dat = MWTextract(tagID = 57508, xlsfile, delta = T, minmax = F)
-      day0 = as.POSIXct(locs[3,8], format='%b %d, %Y', tz='UTC') ## tag date
-      x0 = as.numeric(locs[5,8:9])#(read_excel(xlsfile, skip = 5, sheet = 'Lat&Long', n_max = 1))[,8:9])
-      x0[2] <- x0[2] * -1
-      dayT = as.POSIXct(locs[9,8], format='%b %d, %Y', tz='UTC') ## end date
-      xT = as.numeric(locs[11,8:9])
-      xT[2] <- xT[2] * -1
+      xl_type <- readxl::excel_format(fList[fidx])
+      if (xl_type == 'xls'){
+        locs <- gdata::read.xls(fList[fidx], sheet='Lat&Long', skip=1, header=T, stringsAsFactors=F)
 
-      ## check for lon values in east or west
-      if(any(!is.na(stringr::str_locate(names(locs)[3], 'W')))) is_west <- TRUE
+        day0 = as.POSIXct(locs[3,8], format='%b %d, %Y', tz='UTC') ## tag date
+        x0 = as.numeric(locs[5,8:9])
+        x0[2] <- x0[2] * -1
+        dayT = as.POSIXct(locs[9,8], format='%b %d, %Y', tz='UTC') ## end date
+        xT = as.numeric(locs[11,8:9])
+        xT[2] <- xT[2] * -1
 
-      locs <- locs[,1:3]
-      locs$Date <- as.POSIXct(locs$Date, format='%b %d, %Y', tz='UTC')
+        ## check for lon values in east or west
+        if(any(!is.na(stringr::str_locate(names(locs)[3], 'W')))) is_west <- TRUE
+
+        locs <- locs[,1:3]
+        locs$Date <- as.POSIXct(locs$Date, format='%b %d, %Y', tz='UTC')
+
+      } else if (xl_type == 'xlsx'){
+        locs <- openxlsx::read.xlsx(fList[fidx], sheet='Lat&Long', startRow = 2)
+
+        day0 = as.POSIXct(as.numeric(locs[3,6]) * 3600 * 24, origin='1899-12-30', tz='UTC')## tag date
+        x0 = as.numeric(locs[5,6:7])
+        x0[2] <- x0[2] * -1
+        dayT = as.POSIXct(as.numeric(locs[9,6]) * 3600 * 24, origin='1899-12-30', tz='UTC')## tag date
+        xT = as.numeric(locs[11,6:7])
+        xT[2] <- xT[2] * -1
+
+        ## check for lon values in east or west
+        if(any(!is.na(stringr::str_locate(names(locs)[3], 'W')))) is_west <- TRUE
+
+        locs <- locs[,1:3]
+        locs$Date <- as.POSIXct(locs$Date * 3600 * 24, origin='1899-12-30', tz='UTC')
+
+      } else{
+        stop("Error: something bad happened when trying to parse the MT file as xls or xlsx. Are you sure you're providing one of these file types?")
+      }
+
       names(locs)[1:3] <- c('DateTime','latitude','longitude')
 
       if (is_west) locs$longitude <- locs$longitude * -1
@@ -430,21 +479,46 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
     if (fe){
       print(paste('Reading min max statistics from', fName, '...'))
 
-      depth_mm <- try(gdata::read.xls(fList[fidx], sheet='Press Data (MinMax)', skip=1, header=T), TRUE)
+      xl_type <- readxl::excel_format(fList[fidx])
+      if (xl_type == 'xls'){
+        depth_mm <- try(gdata::read.xls(fList[fidx], sheet='Press Data (MinMax)', skip=1, header=T), TRUE)
+
+      } else if (xl_type == 'xlsx'){
+        depth_mm <- try(openxlsx::read.xlsx(fList[fidx], sheet='Press Data (MinMax)', startRow = 2), TRUE)
+
+      } else{
+        stop("Error: something bad happened when trying to parse the MT file as xls or xlsx. Are you sure you're providing one of these file types?")
+      }
+
 
       if (class(depth_mm) == 'try-error'){
         print('Unable to read data for min max statistics. Likely there is no sheet named Press Data (MinMax).')
 
       } else{
         depth_mm <- depth_mm[,1:5] # 5 cols
+        names(depth_mm)[1] <- 'Date.Time'
 
-        temp_mm <- gdata::read.xls(fList[fidx], sheet='Temp Data (MinMax)', skip=1, header=T)[,1:5] # 5 cols
-        light_mm <- gdata::read.xls(fList[fidx], sheet='Light Data (MinMax)', skip=1, header=T)[,1:3] # 5 cols
+        xl_type <- readxl::excel_format(fList[fidx])
+        if (xl_type == 'xls'){
+          temp_mm <- gdata::read.xls(fList[fidx], sheet='Temp Data (MinMax)', skip=1, header=T)[,1:5] # 5 cols
+          light_mm <- gdata::read.xls(fList[fidx], sheet='Light Data (MinMax)', skip=1, header=T)[,1:5] # 5 cols
 
+          depth_mm$Date <- as.POSIXct(depth_mm$Date.Time, format='%m/%d/%y', tz='UTC')
+          temp_mm$Date <- as.POSIXct(temp_mm$Date.Time, format='%m/%d/%y', tz='UTC')
+          light_mm$Date <- as.POSIXct(light_mm$Date.Time, format='%m/%d/%y', tz='UTC')
 
-        depth_mm$Date <- as.POSIXct(depth_mm$Date.Time, format='%m/%d/%y', tz='UTC')
-        temp_mm$Date <- as.POSIXct(temp_mm$Date.Time, format='%m/%d/%y', tz='UTC')
-        light_mm$Date <- as.POSIXct(light_mm$Date.Time, format='%m/%d/%y', tz='UTC')
+        } else if (xl_type == 'xlsx'){
+          temp_mm <- openxlsx::read.xlsx(fList[fidx], sheet='Temp Data (MinMax)', startRow = 2)[,1:5] # 5 cols
+          names(temp_mm)[1] <- 'Date.Time'
+
+          light_mm <- openxlsx::read.xlsx(fList[fidx], sheet='Light Data (MinMax)', startRow = 2)[,1:5] # 5 cols
+          names(light_mm)[1] <- 'Date.Time'
+
+          depth_mm$Date <- as.POSIXct(as.numeric(depth_mm$Date.Time) * 3600 * 24, origin='1899-12-30', tz='UTC')
+          temp_mm$Date <- as.POSIXct(as.numeric(temp_mm$Date.Time) * 3600 * 24, origin='1899-12-30', tz='UTC')
+          light_mm$Date <- as.POSIXct(as.numeric(light_mm$Date.Time) * 3600 * 24, origin='1899-12-30', tz='UTC')
+
+        }
 
         ## merge
         mti <- merge(depth_mm, temp_mm, by='Date')
@@ -484,107 +558,6 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
     } # end fe
   } # end if tagtype
   if (exists('fe')) rm(fe)
-
-  #--------------------------
-  ## LOTEK PSAT - time series data
-  #--------------------------
-
-  if (tagtype == 'popup' & manufacturer == 'Lotek'){
-    print('Reading Lotek PSAT for vertical data...')
-
-    stop('This tag type and manufacturer combination is not currently supported.')
-
-    if (is.null(fName)) stop('fName must be specified if manufacturer is Lotek')
-
-    fList <- list.files(dir, full.names = T)
-    fidx <- grep(fName, fList)
-    if (length(fidx) == 0){
-      print(paste('No Lotek data to gather using', fName, '.', sep=''))
-      fe <- FALSE
-    } else if (length(fidx) > 1){
-      stop(paste(length(fidx), 'files match', fName, 'in the current directory. Ensure there are no duplicated extensions and try again.'))
-    } else if (length(fidx) == 1){
-      fe <- TRUE
-    }
-
-    if (fe){
-      lotek <- data.frame(readRDS('~/work/RData/FurukawaS/RegularLog_YT20070605_D2070.RDS'))
-      names(lotek) <- c('DateTime', 'depth','temperature','light')
-      lotek$DateTime <- as.POSIXct(lotek$DateTime, format=findDateFormat(lotek$DateTime), tz='UTC')
-      lotek <- lotek[which(lotek$DateTime >= dates[1] & lotek$DateTime <= dates[2]),]
-
-      # summarize with melt
-      lotek.new <- reshape2::melt(lotek, id.vars=c('DateTime'), measure.vars = c('temperature','depth','light'))
-      lotek.new$VariableName <- lotek.new$variable
-
-      # merge with obs types and do some formatting
-      lotek.new <- merge(x = lotek.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
-      lotek.new <- lotek.new[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
-      names(lotek.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
-      lotek.new <- lotek.new[order(lotek.new$DateTime, lotek.new$VariableID),]
-      #lotek.new <- lotek.new[which(!is.na(lotek.new$VariableValue)),]
-      lotek.new$DateTime <- as.POSIXct(lotek.new$DateTime, tz='UTC')
-      lotek.new$DateTime <- format(lotek.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
-
-      if (exists('returnData')){
-        returnData <- rbind(returnData, lotek.new)
-      } else {
-        returnData <- lotek.new
-      }
-    } # end fe
-  } # end if tagtype
-  if (exists('fe')) rm(fe)
-
-  #--------------------------
-  ## LOTEK PSAT - raw position data
-  #--------------------------
-
-  if (tagtype == 'popup' & manufacturer == 'Lotek'){
-    print('Reading Lotek PSAT for position data...')
-
-    stop('This tag type and manufacturer combination is not currently supported.')
-
-    if (is.null(fName)) stop('fName must be specified if manufacturer is Lotek')
-
-    fList <- list.files(dir, full.names = T)
-    fidx <- grep(fName, fList)
-    if (length(fidx) == 0){
-      print(paste('No Lotek data to gather using', fName, '.', sep=''))
-      fe <- FALSE
-    } else if (length(fidx) > 1){
-      stop(paste(length(fidx), 'files match', fName, 'in the current directory. Ensure there are no duplicated extensions and try again.'))
-    } else if (length(fidx) == 1){
-      fe <- TRUE
-    }
-
-    if (fe){
-      lotek <- data.frame(readRDS('~/work/RData/FurukawaS/DayLog_YT20070605_D2070.RDS'))
-      names(lotek) <- c('DateTime', 'longitude','latitude')
-      lotek$DateTime <- as.POSIXct(lotek$DateTime, format=findDateFormat(lotek$DateTime), tz='UTC')
-      lotek <- lotek[which(lotek$DateTime > dates[1] & lotek$DateTime < dates[2]),]
-
-      # summarize with melt
-      lotek.new <- reshape2::melt(lotek, id.vars=c('DateTime'), measure.vars = c('longitude','latitude'))
-      lotek.new$VariableName <- lotek.new$variable
-
-      # merge with obs types and do some formatting
-      lotek.new <- merge(x = lotek.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
-      lotek.new <- lotek.new[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
-      names(lotek.new) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
-      lotek.new <- lotek.new[order(lotek.new$DateTime, lotek.new$VariableID),]
-      #lotek.new <- lotek.new[which(!is.na(lotek.new$VariableValue)),]
-      lotek.new$DateTime <- as.POSIXct(lotek.new$DateTime, tz='UTC')
-      lotek.new$DateTime <- format(lotek.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
-
-      if (exists('returnData')){
-        returnData <- rbind(returnData, lotek.new)
-      } else {
-        returnData <- lotek.new
-      }
-    } # end fe
-  } # end if tagtype
-  if (exists('fe')) rm(fe)
-
 
   #--------------------------
   ## WILDLIFE COMPUTERS PSAT
