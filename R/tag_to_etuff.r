@@ -246,9 +246,23 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
         depth <- gdata::read.xls(fList[fidx], sheet='Press Data', skip=1, header=T)[,1:5] # 5 cols
         temp <- gdata::read.xls(fList[fidx], sheet='Temp Data', skip=1, header=T)[,1:5] # 5 cols
 
+        names(depth) <- c('Date.Time','Press.val.','Gain','Depth.m.','Delta.val.')
+        names(temp) <- c('Date.Time','Temp.val.','Temp.C.','Delta.val.','DeltaLim.Temp')
+
+        depth$Date <- as.POSIXct(depth$Date.Time, format='%m/%d/%y %H:%M', tz='UTC')
+        depth$Depth <- depth$Depth.m. * -1
+        temp$Date <- as.POSIXct(temp$Date.Time, format='%m/%d/%y %H:%M', tz='UTC')
+
       } else if (xl_type == 'xlsx'){
         depth <- openxlsx::read.xlsx(fList[fidx], sheet='Press Data', startRow = 2)[,1:5] # 5 cols
         temp <- openxlsx::read.xlsx(fList[fidx], sheet='Temp Data', startRow = 2)[,1:5] # 5 cols
+
+        names(depth) <- c('Date.Time','Press.val.','Gain','Depth.m.','Delta.val.')
+        names(temp) <- c('Date.Time','Temp.val.','Temp.C.','Delta.val.','DeltaLim.Temp')
+
+        depth$Date <- as.POSIXct(as.numeric(depth$Date.Time) * 3600 * 24, origin='1899-12-30', tz='UTC')
+        depth$Depth <- depth$Depth.m. * -1
+        temp$Date <- as.POSIXct(as.numeric(temp$Date.Time) * 3600 * 24, origin='1899-12-30', tz='UTC')
 
       } else{
         stop("Error: something bad happened when trying to parse the MT file as xls or xlsx. Are you sure you're providing one of these file types?")
@@ -257,13 +271,6 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       ## unfortunately the tidyverse version, readxl 1.3.1, is too unreliable so we're skipping it for now
       #depth <- readxl::read_excel(fList[fidx], sheet='Press Data', skip=1)[,1:5]
       #temp <- readxl::read_excel(fList[fidx], sheet='Temp Data', skip=1)[,1:5]
-
-      names(depth) <- c('Date.Time','Press.val.','Gain','Depth.m.','Delta.val.')
-      names(temp) <- c('Date.Time','Temp.val.','Temp.C.','Delta.val.','DeltaLim.Temp')
-
-      depth$Date <- as.POSIXct(depth$Date.Time, format='%m/%d/%y %H:%M', tz='UTC')
-      depth$Depth <- depth$Depth.m. * -1
-      temp$Date <- as.POSIXct(temp$Date.Time, format='%m/%d/%y %H:%M', tz='UTC')
 
       mti <- merge(depth, temp, by='Date', all = TRUE)
       mti <- mti[which(mti$Date >= dates[1] & mti$Date <= dates[2]),]
@@ -329,20 +336,30 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       xl_type <- readxl::excel_format(fList[fidx])
       if (xl_type == 'xls'){
         light <- gdata::read.xls(fList[fidx], sheet='Sunrise and Sunset Times', skip=1, header=T)[,1:5]
+        names(light) <- c('Date', 'Sunrise.Time', 'depthSunrise','Sunset.Time', 'depthSunset')
+        light$Date <- as.Date(light$Date, format='%b %d, %Y', tz='UTC')
+
+        sr <- reshape2::melt(light, id.vars=c('Date', 'Sunrise.Time'), measure.vars = c('depthSunrise'))
+        sr$DateTime <- as.POSIXct(paste(sr$Date, sr$Sunrise.Time), format='%Y-%m-%d %H:%M:%S', tz='UTC')
+        ss <- reshape2::melt(light, id.vars=c('Date', 'Sunset.Time'), measure.vars = c('depthSunset'))
+        ss$DateTime <- as.POSIXct(paste(ss$Date, ss$Sunset.Time), format='%Y-%m-%d %H:%M:%S', tz='UTC')
 
       } else if (xl_type == 'xlsx'){
         light <- openxlsx::read.xlsx(fList[fidx], sheet='Sunrise and Sunset Times', startRow = 2)[,1:5] # 5 cols
+        names(light) <- c('Date', 'Sunrise.Time', 'depthSunrise','Sunset.Time', 'depthSunset')
+        light$Sunrise.Time <- light$Date + light$Sunrise.Time
+        light$Sunset.Time <- light$Date + light$Sunset.Time
+        light$Date <- as.Date(as.POSIXct(as.numeric(light$Date) * 3600 * 24, origin='1899-12-30', tz='UTC'))
+
+        sr <- reshape2::melt(light, id.vars=c('Date', 'Sunrise.Time'), measure.vars = c('depthSunrise'))
+        sr$DateTime <- as.POSIXct(sr$Sunrise.Time * 3600 * 24, origin='1899-12-30', tz='UTC')
+        ss <- reshape2::melt(light, id.vars=c('Date', 'Sunset.Time'), measure.vars = c('depthSunset'))
+        ss$DateTime <- as.POSIXct(ss$Sunset.Time * 3600 * 24, origin='1899-12-30', tz='UTC')
 
       } else{
         stop("Error: something bad happened when trying to parse the MT file as xls or xlsx. Are you sure you're providing one of these file types?")
       }
-      names(light) <- c('Date', 'Sunrise.Time', 'depthSunrise','Sunset.Time', 'depthSunset')
-      light$Date <- as.Date(light$Date, format='%b %d, %Y', tz='UTC')
 
-      sr <- reshape2::melt(light, id.vars=c('Date', 'Sunrise.Time'), measure.vars = c('depthSunrise'))
-      sr$DateTime <- as.POSIXct(paste(sr$Date, sr$Sunrise.Time), format='%Y-%m-%d %H:%M:%S', tz='UTC')
-      ss <- reshape2::melt(light, id.vars=c('Date', 'Sunset.Time'), measure.vars = c('depthSunset'))
-      ss$DateTime <- as.POSIXct(paste(ss$Date, ss$Sunset.Time), format='%Y-%m-%d %H:%M:%S', tz='UTC')
       light <- rbind(sr[,c('DateTime','variable','value')], ss[,c('DateTime','variable','value')])
       light$VariableName <- light$variable
 
@@ -422,7 +439,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
         if(any(!is.na(stringr::str_locate(names(locs)[3], 'W')))) is_west <- TRUE
 
         locs <- locs[,1:3]
-        locs$Date <- as.POSIXct(locs$Date * 3600 * 24, origin='1899-12-30', tz='UTC')
+        locs$Date <- as.POSIXct(as.numeric(locs$Date) * 3600 * 24, origin='1899-12-30', tz='UTC')
 
       } else{
         stop("Error: something bad happened when trying to parse the MT file as xls or xlsx. Are you sure you're providing one of these file types?")
