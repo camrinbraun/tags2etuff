@@ -28,7 +28,7 @@
 #' @export
 
 tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = NULL,
-                         obsTypes = NULL, check_meta = TRUE,...){
+                         obsTypes = NULL, qc_obsTypes = NULL, check_meta = TRUE,...){
 
   #if (check_meta) build_meta_head(meta_row = meta_row, write_hdr = F)
 
@@ -81,6 +81,15 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
     # if that doesnt work, kill the funciton
     if (class(obsTypes) == 'try-error') stop(paste('obsTypes not specified in function call and unable to automatically download it from github at', url, sep=' '))
 
+  }
+
+  if (is.null(qc_obsTypes)){
+    # try to get it from github
+    print('Getting qc_obsTypes...')
+    url <- "https://raw.githubusercontent.com/camrinbraun/tagbase/add-qc/eTUFF-qc-ObservationTypes.csv"
+    qc_obsTypes <- try(read.csv(text=RCurl::getURL(url)), TRUE)
+    # if that doesnt work, kill the funciton
+    if (class(qc_obsTypes) == 'try-error') stop(paste('qc_obsTypes not specified in function call and unable to automatically download it from github at', url, sep=' '))
   }
 
   # check the specific manufacturer is actually supported
@@ -243,22 +252,22 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
 
       xl_type <- readxl::excel_format(fList[fidx])
       if (xl_type == 'xls'){
-        depth <- gdata::read.xls(fList[fidx], sheet='Press Data', skip=1, header=T)[,1:5] # 5 cols
-        temp <- gdata::read.xls(fList[fidx], sheet='Temp Data', skip=1, header=T)[,1:5] # 5 cols
+        depth <- gdata::read.xls(fList[fidx], sheet='Press Data', skip=1, header=T)[,1:7] # 7 cols
+        temp <- gdata::read.xls(fList[fidx], sheet='Temp Data', skip=1, header=T)[,1:6] # 6 cols
 
-        names(depth) <- c('Date.Time','Press.val.','Gain','Depth.m.','Delta.val.')
-        names(temp) <- c('Date.Time','Temp.val.','Temp.C.','Delta.val.','DeltaLim.Temp')
+        names(depth) <- c('Date.Time','Press.val.','Gain','Depth.m.','Delta.val.depth', 'DeltaLim.Dives', 'DeltaLim.Ascents')
+        names(temp) <- c('Date.Time','Temp.val.','Temp.C.','Delta.val.temp','DeltaLim.PosTemp','DeltaLim.NegTemp')
 
         depth$Date <- as.POSIXct(depth$Date.Time, format='%m/%d/%y %H:%M', tz='UTC')
         depth$Depth <- depth$Depth.m. * -1
         temp$Date <- as.POSIXct(temp$Date.Time, format='%m/%d/%y %H:%M', tz='UTC')
 
       } else if (xl_type == 'xlsx'){
-        depth <- openxlsx::read.xlsx(fList[fidx], sheet='Press Data', startRow = 2)[,1:5] # 5 cols
-        temp <- openxlsx::read.xlsx(fList[fidx], sheet='Temp Data', startRow = 2)[,1:5] # 5 cols
+        depth <- openxlsx::read.xlsx(fList[fidx], sheet='Press Data', startRow = 2)[,1:7] # 7 cols
+        temp <- openxlsx::read.xlsx(fList[fidx], sheet='Temp Data', startRow = 2)[,1:6] # 6 cols
 
-        names(depth) <- c('Date.Time','Press.val.','Gain','Depth.m.','Delta.val.')
-        names(temp) <- c('Date.Time','Temp.val.','Temp.C.','Delta.val.','DeltaLim.Temp')
+        names(depth) <- c('Date.Time','Press.val.','Gain','Depth.m.','Delta.val.depth', 'DeltaLim.Dives', 'DeltaLim.Ascents')
+        names(temp) <- c('Date.Time','Temp.val.','Temp.C.','Delta.val.temp','DeltaLim.PosTemp','DeltaLim.NegTemp')
 
         depth$Date <- as.POSIXct(as.numeric(depth$Date.Time) * 3600 * 24, origin='1899-12-30', tz='UTC')
         depth$Depth <- depth$Depth.m. * -1
@@ -275,13 +284,18 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       mti <- merge(depth, temp, by='Date', all = TRUE)
       mti <- mti[which(mti$Date >= dates[1] & mti$Date <= dates[2]),]
       names(mti)[1] <- 'DateTime'
+
+      qc <- mti[,c('DateTime','Delta.val.depth','DeltaLim.Dives','DeltaLim.Ascents','Delta.val.temp','DeltaLim.PosTemp','DeltaLim.NegTemp')]
+      mti <- mti[,c('DateTime', names(mti)[which(!(names(mti) %in% names(qc)))])]
+
       names(mti)[grep('Press.val', names(mti))] <- 'pressure'
-      #names(mti)[6] <- 'depthDelta'
       names(mti)[grep('Depth.m', names(mti))] <- 'depth'
       names(mti)[grep('Temp.C', names(mti))] <- 'temperature'
-      #names(mti)[11] <- 'tempDelta'
-      #mti$depthDelta <- abs(as.numeric(as.character(mti$depthDelta)))
-      #mti$tempDelta <- abs(as.numeric(as.character(mti$tempDelta)))
+
+      names(qc)[grep('DeltaLim.Dives', names(qc))] <- 'depth_deltaLimDives'
+      names(qc)[grep('DeltaLim.Ascents', names(qc))] <- 'depth_deltaLimAscents'
+      names(qc)[grep('DeltaLim.PosTemp', names(qc))] <- 'temperature_deltaLimPos'
+      names(qc)[grep('DeltaLim.NegTemp', names(qc))] <- 'temperature_deltaLimNeg'
 
       # summarize with melt
       #mti.new <- reshape2::melt(mti, id.vars=c('DateTime'), measure.vars = c('temperature','depth','pressure','depthDelta','tempDelta'))
@@ -296,16 +310,33 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       #mti.new <- mti.new[which(!is.na(mti.new$VariableValue)),]
       mti.new$DateTime <- as.POSIXct(mti.new$DateTime, tz='UTC')
       mti.new$DateTime <- format(mti.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
-
       # convert to positive depth values
       mti.new$VariableValue[which(mti.new$VariableName=='depth')] <- abs(mti.new$VariableValue[which(mti.new$VariableName=='depth')])
       mti.new <- mti.new %>% filter(!is.na(VariableValue))
+
+      qc <- reshape2::melt(qc, id.vars=c('DateTime'), measure.vars = c('depth_deltaLimDives','depth_deltaLimAscents','temperature_deltaLimPos','temperature_deltaLimNeg'))
+      qc$VariableName <- qc$variable
+
+      qc <- merge(x = qc, y = qc_obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+      qc <- qc[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
+      names(qc) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+      qc <- qc[order(qc$DateTime, qc$VariableID),]
+      qc$DateTime <- as.POSIXct(qc$DateTime, tz='UTC')
+      qc$DateTime <- format(qc$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+      qc <- qc %>% filter(!is.na(VariableValue))
 
       if (exists('returnData')){
         returnData <- rbind(returnData, mti.new)
       } else {
         returnData <- mti.new
       }
+
+      if (exists('return_qc')){
+        return_qc <- rbind(return_qc, qc)
+      } else {
+        return_qc <- qc
+      }
+
     } # end fe
   } # end if tagtype
   if (exists('fe')) rm(fe)
@@ -438,20 +469,28 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
         ## check for lon values in east or west
         if(any(!is.na(stringr::str_locate(names(locs)[3], 'W')))) is_west <- TRUE
 
-        locs <- locs[,1:3]
+        locs <- locs[,1:5]
         locs$Date <- as.POSIXct(as.numeric(locs$Date) * 3600 * 24, origin='1899-12-30', tz='UTC')
 
       } else{
         stop("Error: something bad happened when trying to parse the MT file as xls or xlsx. Are you sure you're providing one of these file types?")
       }
 
-      names(locs)[1:3] <- c('DateTime','latitude','longitude')
+      names(locs)[1:5] <- c('DateTime','latitude','longitude','latitude_avg','longitude_avg')
+      qc <- locs[,c(1,4:5)]
+      locs <- locs[,c(1:3)]
 
-      if (is_west) locs$longitude <- locs$longitude * -1
+      if (is_west){
+        locs$longitude <- locs$longitude * -1
+        qc$longitude_avg <- qc$longitude_avg * -1
+      }
 
       # summarize with melt
       mti.new <- reshape2::melt(locs, id.vars=c('DateTime'), measure.vars = c('latitude','longitude'))
       mti.new$VariableName <- mti.new$variable
+
+      qc <- reshape2::melt(qc, id.vars=c('DateTime'), measure.vars = c('latitude_avg','longitude_avg'))
+      qc$VariableName <- qc$variable
 
       # merge with obs types and do some formatting
       mti.new <- merge(x = mti.new, y = obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
@@ -461,20 +500,34 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       #mti.new <- mti.new[which(!is.na(mti.new$VariableValue)),]
       mti.new$DateTime <- as.POSIXct(mti.new$DateTime, tz='UTC')
       mti.new$DateTime <- format(mti.new$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
-
       mti.new <- mti.new %>% filter(!is.na(VariableValue))
+
+      qc <- merge(x = qc, y = qc_obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+      qc <- qc[,c('DateTime','VariableID','value','VariableName','VariableUnits')]
+      names(qc) <- c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')
+      qc <- qc[order(qc$DateTime, qc$VariableID),]
+      qc$DateTime <- as.POSIXct(qc$DateTime, tz='UTC')
+      qc$DateTime <- format(qc$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+      qc <- qc %>% filter(!is.na(VariableValue))
 
       if (exists('returnData')){
         returnData <- rbind(returnData, mti.new)
       } else {
         returnData <- mti.new
       }
+
+      if (exists('return_qc')){
+        return_qc <- rbind(return_qc, qc)
+      } else {
+        return_qc <- qc
+      }
+
     } # end fe
   } # end if tagtype
   if (exists('fe')) rm(fe)
 
   #--------------------------
-  ## MTI PSAT - time series data
+  ## MTI PSAT - min/max data
   #--------------------------
 
   if (tagtype == 'popup' & manufacturer == 'Microwave'){
@@ -1303,6 +1356,13 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   returnData$DateTime <- as.character(returnData$DateTime)
   returnData$DateTime[which(is.na(returnData$DateTime))] <- ''
 
+  if (exists('return_qc')){
+    return_qc <- distinct(return_qc, DateTime, VariableName, .keep_all = TRUE)
+    return_qc <- return_qc[order(return_qc$DateTime, return_qc$VariableID),]
+    return_qc$DateTime <- as.character(return_qc$DateTime)
+    return_qc$DateTime[which(is.na(return_qc$DateTime))] <- ''
+  }
+
   if(exists('write_direct')){
     if (write_direct == TRUE & exists('etuff_file')){
       ## write the output
@@ -1310,6 +1370,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       #write.table(etuff, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
       print(utils::head(returnData))
       data.table::fwrite(returnData, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
+      data.table::fwrite(return_qc, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
 
       print(paste('Data added to eTUFF file ', etuff_file, '.', sep=''))
 
@@ -1324,8 +1385,16 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   df <- returnData %>% dplyr::select(-c(VariableID, VariableUnits)) %>%
     tidyfast::dt_pivot_wider(names_from = VariableName, values_from = VariableValue) %>%
     as.data.frame()
-
   names(df)[1] <- 'DateTime'
+
+  if (exists('return_qc')){
+    qc <- return_qc %>% dplyr::select(-c(VariableID, VariableUnits)) %>%
+      tidyfast::dt_pivot_wider(names_from = VariableName, values_from = VariableValue) %>%
+      as.data.frame()
+    names(qc)[1] <- 'DateTime'
+    qc$DateTime <- fasttime::fastPOSIXct(qc$DateTime, tz='UTC')
+    qc$id <- meta_row$instrument_name
+  }
 
   print('Generating bins...')
   ## datetime is blank for histo bins and incorporates adjustments above for bins whether or not theyre provided as inputs
@@ -1337,11 +1406,15 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   }
   if (!exists('bins')) bins <- NULL
 
-  #df$DateTime <- as.POSIXct(df$DateTime, tz='UTC')
   df$DateTime <- fasttime::fastPOSIXct(df$DateTime, tz='UTC')
   df$id <- meta_row$instrument_name
 
-  etuff <- list(etuff = df, meta = meta_row, bins = bins)
+  if (exists('return_qc')){
+    etuff <- list(etuff = df, meta = meta_row, bins = bins, qc = qc)
+  } else{
+    etuff <- list(etuff = df, meta = meta_row, bins = bins, qc = NULL)
+  }
+
   class(etuff) <- 'etuff'
   return(etuff)
 }# end function
