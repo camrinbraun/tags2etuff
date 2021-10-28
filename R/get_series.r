@@ -38,6 +38,7 @@ get_series <- function(etuff, temp_res = NULL, what_tz = NULL){
 
   series$depth <- as.numeric(series$depth)
   if (any(names(series) %in% c('temperature'))) series$temperature <- as.numeric(series$temperature)
+  if (any(names(series) %in% c('light'))) series$light <- as.numeric(series$light)
 
   if (length(what_tz) > 1){
 
