@@ -89,8 +89,8 @@ get_3d <- function(etuff, series = NULL, fG = TRUE,...){
     names(track) <- c('track_dt','latitude','longitude')
 
   } else{
-    track <- track[,c('track_dt','latitude','longitude')]
-
+    track <- track[,c('DateTime','latitude','longitude')]
+    colnames(track)[colnames(track) == 'DateTime'] <- 'track_dt'
   }
 
   track_interval <- lubridate::interval(track$track_dt[1:(nrow(track)-1)], track$track_dt[2:(nrow(track))])
