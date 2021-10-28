@@ -23,10 +23,10 @@ get_series <- function(etuff, temp_res = NULL, what_tz = NULL){
 
   ## isolate the appropriate data
   if (class(etuff) == 'etuff_archival'){
-    df <- archival_to_etuff(df, vars = c('DateTime','depth','temperature', 'internalTemperature'))
+    df <- archival_to_etuff(df, vars = c('DateTime','depth','temperature', 'internalTemperature', 'light'))
   }
 
-  series <- df[,c(which(names(df) %in% c('DateTime','depth','temperature', 'internalTemperature')))]
+  series <- df[,c(which(names(df) %in% c('DateTime','depth','temperature', 'internalTemperature', 'light')))]
   if (class(series) != 'data.frame') return(series = NA)
   series <- series[which(!is.na(series$DateTime)),]
 
@@ -38,6 +38,7 @@ get_series <- function(etuff, temp_res = NULL, what_tz = NULL){
 
   series$depth <- as.numeric(series$depth)
   if (any(names(series) %in% c('temperature'))) series$temperature <- as.numeric(series$temperature)
+  if (any(names(series) %in% c('light'))) series$light <- as.numeric(series$light)
 
   if (length(what_tz) > 1){
 
