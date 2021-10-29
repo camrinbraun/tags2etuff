@@ -20,6 +20,7 @@ get_tz <- function(etuff, what_tz = NULL){
   if (class(etuff) == 'etuff_archival'){
     locs <- df %>% filter(VariableName %in% c('DateTime','latitude','longitude')) %>% dplyr::select(-c(id)) %>% tidyr::spread(VariableName, VariableValue)
     locs$longitude <- as.numeric(locs$longitude)
+    if (any(locs$longitude > 180)) locs$longitude <- make180(locs$longitude)
     locs$latitude <- as.numeric(locs$latitude)
     locs <- locs[which(!is.na(locs$latitude)),]
   } else{
@@ -27,6 +28,7 @@ get_tz <- function(etuff, what_tz = NULL){
       locs <- df[,c('DateTime','latitude','longitude')]
       locs <- locs[which(!is.na(locs$DateTime) & !is.na(locs$latitude) & !is.na(locs$longitude)),]
       locs$longitude <- as.numeric(locs$longitude)
+      if (any(locs$longitude > 180)) locs$longitude <- make180(locs$longitude)
       locs$latitude <- as.numeric(locs$latitude)
       locs <- locs[which(!is.na(locs$latitude)),]
     }
