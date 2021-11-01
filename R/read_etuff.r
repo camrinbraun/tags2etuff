@@ -4,21 +4,41 @@
 #'
 #' @param etuff_file is an etuff text file
 #' @param header is logical indicating whether or not the target etuff_file has a header. This will nearly always be TRUE (default).
-#' @param metaTypes is a dataframe that describes the appropriate inventory of metadata vocabulary. Default is NULL in which this table is read from Github.
+#' @param metaTypes is an optional argument. If used, it provides a dataframe that describes the appropriate inventory of metadata vocabulary. Default is NULL in which this table is read from Github.
 #' @importFrom data.table fread
 #' @export
 #' @return an etuff object
 
-read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
+read_etuff <- function(etuff_file, header = TRUE,...){
+
+  args <- list(...)
+  if ('metaTypes' %in% names(args)){
+    metaTypes <- args$metaTypes
+  } else{
+    metaTypes <- NULL
+  }
+
+  if ('qc_obsTypes' %in% names(args)){
+    qc_obsTypes <- args$qc_obsTypes
+  } else{
+    qc_obsTypes <- NULL
+  }
 
   if (is.null(metaTypes)){
     print('metaTypes is NULL. Trying to retrieve from github.')
     metaTypes <- utils::read.csv(url("https://raw.githubusercontent.com/camrinbraun/tagbase/master/eTagMetadataInventory.csv"))
-
     warning('Some restrictions on metaTypes$Necessity are being relaxed. Provide your own metaTypes input here to keep default necessity values.')
     ## this relaxes some of the previously required meta attributes
     metaTypes$Necessity[which(metaTypes$AttributeID %in% c(3,8,100,101,200,302,400:404,1000))] <- 'recommended'
+  }
 
+  if (is.null(qc_obsTypes)){
+    # try to get it from github
+    print('Getting qc_obsTypes...')
+    url <- "https://raw.githubusercontent.com/camrinbraun/tagbase/add-qc/eTUFF-qc-ObservationTypes.csv"
+    qc_obsTypes <- try(read.csv(text=RCurl::getURL(url)), TRUE)
+    # if that doesnt work, kill the funciton
+    if (class(qc_obsTypes) == 'try-error') stop(paste('qc_obsTypes not specified in function call and unable to automatically download it from github at', url, sep=' '))
   }
 
   ## header will nearly always be true (default) but special circumstances may necessitate reading an etuff file that has NOT been written with a header
@@ -89,10 +109,13 @@ read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
     df <- data.frame(data.table::fread(etuff_file, sep=',', header = T, skip = 0))
   }
 
-  df <- df %>% dplyr::select(-c(VariableID, VariableUnits)) %>% tidyr::spread(VariableName, VariableValue)
+  df <- df %>% dplyr::select(-c(VariableID, VariableUnits))
+  qc <- df %>% filter(VariableName %in% qc_obsTypes$VariableName) %>% tidyr::spread(VariableName, VariableValue)
+  df <- df %>% filter(!(VariableName %in% qc_obsTypes$VariableName)) %>% tidyr::spread(VariableName, VariableValue)
 
   ## format date time
   names(df)[1] <- 'DateTime'
+  if (nrow(qc) > 0) names(qc)[1] <- 'DateTime'
 
   ## datetime is blank for histo bins
   if (any(df$DateTime == '' | is.na(df$DateTime))){
@@ -103,13 +126,19 @@ read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
   }
 
   df$DateTime <- as.POSIXct(df$DateTime, tz='UTC')
+  if (nrow(qc) > 0) qc$DateTime <- as.POSIXct(qc$DateTime, tz='UTC')
   warning('Current TZ specification is UTC.')
 
   df$id <- hdr$instrument_name
+  if (nrow(qc) > 0) qc$id <- hdr$instrument_name
 
   if (!exists('bins')) bins <- NULL
 
-  etuff <- list(etuff = df, meta = hdr, bins = bins)
+  if (nrow(qc) > 0){
+    etuff <- list(etuff = df, meta = hdr, bins = bins, qc = qc)
+  } else{
+    etuff <- list(etuff = df, meta = hdr, bins = bins, qc = NULL)
+  }
   class(etuff) <- 'etuff'
   return(etuff)
 }
