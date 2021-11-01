@@ -20,6 +20,12 @@ write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE,..
     obsTypes <- NULL
   }
 
+  if ('qc_obsTypes' %in% names(args)){
+    qc_obsTypes <- args$qc_obsTypes
+  } else{
+    qc_obsTypes <- NULL
+  }
+
   if (class(etuff) != 'etuff') stop('Input etuff object must be of class etuff.')
   if (is.null(meta_row)) meta_row <- etuff$meta
 
@@ -32,6 +38,18 @@ write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE,..
     names(bins) <- c('VariableName','VariableValue')
   } else{
     bins <- NULL
+  }
+
+  ## reshape qc
+  if ('qc' %in% names(etuff)){
+    qc <- etuff$qc %>% select(-id) %>% reshape2::melt(id.vars=c('DateTime'))
+    names(qc) <- c('DateTime','VariableName','VariableValue')
+    qc <- qc %>% filter(!is.na(VariableValue))
+
+    if (class(qc$DateTime)[1] != 'POSIXct'){
+      qc <- qc[which(qc$DateTime != ''),]
+      qc$DateTime <- as.POSIXct(qc$DateTime, tz='UTC')
+    }
   }
 
   ## reshape etuff
@@ -52,7 +70,6 @@ write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE,..
     etuff <- rbind(etuff, bins)
   } else{
     etuff$DateTime <- format(etuff$DateTime, '%Y-%m-%d %H:%M:%S', tz='UTC')
-
   }
 
   if (is.null(obsTypes)){
@@ -67,9 +84,28 @@ write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE,..
   }
 
   etuff <- etuff[which(etuff$VariableName != 'id'),]
-
   etuff <- merge(x = etuff, y = obsTypes[ , c('VariableID', 'VariableName', 'VariableUnits')], by = "VariableName", all.x=TRUE)
   etuff <- etuff[,c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')]
+
+  if (exists('qc')){
+    if (is.null(qc_obsTypes)){
+      # try to get it from github
+      print('Getting qc_obsTypes...')
+      url <- "https://raw.githubusercontent.com/camrinbraun/tagbase/add-qc/eTUFF-qc-ObservationTypes.csv"
+      qc_obsTypes <- try(read.csv(text=RCurl::getURL(url)), TRUE)
+      # if that doesnt work, kill the funciton
+      if (class(qc_obsTypes) == 'try-error') stop(paste('qc_obsTypes not specified in function call and unable to automatically download it from github at', url, sep=' '))
+    }
+
+    qc <- merge(x = qc, y = qc_obsTypes[ , c("VariableID","VariableName", 'VariableUnits')], by = "VariableName", all.x=TRUE)
+    qc <- qc[,c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')]
+    qc <- qc[order(qc$DateTime, qc$VariableID),]
+    qc$DateTime <- as.POSIXct(qc$DateTime, tz='UTC')
+    qc$DateTime <- format(qc$DateTime, '%Y-%m-%d %H:%M:%S') # yyyy-mm-dd hh:mm:ss
+    qc <- qc %>% filter(!is.na(VariableValue))
+
+    etuff <- rbind(etuff, qc)
+  }
 
   ## drop those where TAD/TAT bin definitions are arbitrarily assigned timestamps
   #etuff <- etuff[-which(etuff$VariableID >= 301 & etuff$VariableID <= 364 & etuff$DateTime != ''),]
