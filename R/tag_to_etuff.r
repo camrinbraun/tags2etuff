@@ -1370,7 +1370,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       #write.table(etuff, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
       print(utils::head(returnData))
       data.table::fwrite(returnData, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
-      data.table::fwrite(return_qc, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
+      if (exists('return_qc')) data.table::fwrite(return_qc, file = etuff_file, sep = ',', col.names = F, row.names = F, quote = F, append=T)
 
       print(paste('Data added to eTUFF file ', etuff_file, '.', sep=''))
 
