@@ -62,8 +62,12 @@ read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
         old_hdr <- hdr[,i]
         if (!is.na(as.POSIXct(hdr[,i], format = '%m/%d/%y', tz='UTC'))){
           hdr[,i] <- as.POSIXct(hdr[,i], format = '%m/%d/%y', tz='UTC')
-        } else{
+        } else if (!is.na(as.POSIXct(hdr[,i], format = '%Y-%m-%d', tz='UTC'))){
           hdr[,i] <- as.POSIXct(hdr[,i], format = '%Y-%m-%d', tz='UTC')
+        } else if (!is.na(as.POSIXct(as.numeric(hdr[,i]), origin = '1970-01-01', tz='UTC'))){
+          hdr[,i] <- as.POSIXct(as.numeric(hdr[,i]), origin = '1970-01-01', tz='UTC')
+        } else{
+          stop('Unable to parse header dates.')
         }
 
         print(paste(old_hdr, ' has been parsed as ', hdr[,i], '. If this is incorrect, the auto-detection of the date format is wrong.', sep=''))
