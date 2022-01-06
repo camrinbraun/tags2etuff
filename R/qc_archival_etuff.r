@@ -15,7 +15,7 @@
 #' @import ggplot2
 #' @import ggforce
 
-qc_archival_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
+qc_archival_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE, output_dir = NULL){
 
   if (class(etuff) != 'etuff') stop('Input etuff object must be of class etuff.')
 
@@ -225,8 +225,9 @@ qc_archival_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE){
 
 
   if (writePNG){
-    ggsave(file = paste(meta_row$instrument_name, '-psat_qc.png', sep=''), width=12, height=10, units = 'in', g)
-    print(paste('Maps written to ', meta_row$instrument_name, '-psat_qc.pdf.', sep=''))
+    if (is.null(output_dir)) output_dir <- getwd()
+    ggsave(file = paste(output_dir, '/', meta_row$instrument_name, '-psat_qc.png', sep=''), width=12, height=10, units = 'in', g)
+    print(paste('Maps written to ', output_dir, '/', meta_row$instrument_name, '-psat_qc.png.', sep=''))
   } else{
     print('Capture output and use gridExtra::grid.arrange(g) to show plot in device.')
   }

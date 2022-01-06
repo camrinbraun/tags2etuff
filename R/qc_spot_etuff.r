@@ -16,7 +16,7 @@
 #' @import ggplot2
 #' @import ggforce
 
-qc_spot_etuff <- function(etuff, meta_row, writePNG = FALSE){
+qc_spot_etuff <- function(etuff, meta_row, writePNG = FALSE, output_dir = NULL){
 
   ## any where datetime and variablevalue are identical?
   if (class(etuff) != 'etuff') stop('Input etuff object must be of class etuff.')
@@ -86,10 +86,11 @@ qc_spot_etuff <- function(etuff, meta_row, writePNG = FALSE){
 
   #layout_matrix = rbind(c(1), c(2), c(3)))
   if (writePNG){
+    if (is.null(output_dir)) output_dir <- getwd()
     g <- gridExtra::arrangeGrob(grobs = list(p1, p2, p3), ncol=1, heights = c(6,2,2))
-    ggsave(file = paste(meta_row$instrument_name, '-ggmap.png', sep=''), width=8, height=8, units = 'in', g)
+    ggsave(file = paste(output_dir, '/', meta_row$instrument_name, '-ggmap.png', sep=''), width=8, height=8, units = 'in', g)
     #dev.off()
-    print(paste('Maps written to ', meta_row$instrument_name, '-ggmap.png.', sep=''))
+    print(paste('Maps written to ', output_dir, '/', meta_row$instrument_name, '-ggmap.png.', sep=''))
   } else{
     gridExtra::grid.arrange(grobs = list(p1, p2, p3), ncol=1, heights = c(6,2,2))
     print('Should have output plot to graphics device.')
