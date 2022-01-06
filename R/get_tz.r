@@ -31,6 +31,7 @@ get_tz <- function(etuff, what_tz = NULL){
       locs <- locs[which(!is.na(locs$latitude)),]
     }
   }
+  locs$longitude <- make180(locs$longitude)
 
   ## figure out what time zone(s) to use
   if (!is.null(what_tz)){
