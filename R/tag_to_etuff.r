@@ -83,6 +83,8 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
 
   }
 
+  if (names(obsTypes)[1] != 'VariableID') names(obsTypes)[1] <- 'VariableID'
+
   # check the specific manufacturer is actually supported
   #print(manufacturer); print(!exists('customCols'))
   if (manufacturer == 'unknown'){
@@ -130,7 +132,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
     dat <- customCols
 
     #dat$datetime <- testDates(dat$datetime)
-    dt.idx <- which(dat$date < dates[1] | dat$date > dates[2])
+    dt.idx <- which(dat$DateTime < dates[1] | dat$DateTime > dates[2])
     if (length(dt.idx) > 0){
       warning('data in input dataset that is outside the bounds of specified start/end dates.')
       dat <- dat[-dt.idx,]
@@ -710,13 +712,19 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       #arch <- utils::read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F, stringsAsFactors = F)#, skip = skipLines)
 
       nms <- names(arch)
-      ## for temp start with exact "temperature" then "external.temperature" then "recorder.temp"
+      ## for temp start with exact "temperature" then "external.temperature" then "stalk.temp"
       temp_col <- grep('^Temperature$', nms)
       if (length(temp_col) != 1){
         temp_col <- grep('^External.Temperature$', nms)
         if (length(temp_col) != 1){
-          temp_col <- grep('^Recorder.Temp$', nms)
+          temp_col <- grep('^Stalk.Temp$', nms)
         }
+      }
+
+      ## for internal temp start with "internal.temperature" then "recorder.temp"
+      intemp_col <- grep('^Internal.Temperature$', nms)
+      if (length(intemp_col) != 1){
+        intemp_col <- grep('^Recorder.Temp$', nms)
       }
 
       ## for depth use exact "Depth"
@@ -737,8 +745,16 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       #              grep('internal', names(arch), ignore.case = T),
       #              grep('smooth', names(arch), ignore.case = T))
       #idx <- idx[-which(idx %in% drop_idx)]
-      arch <- arch[,c(time_col, depth_col, temp_col, light_col)]
-      names(arch) <- c('DateTime','depth','temperature','light')
+      if (length(intemp_col) > 0){
+        arch <- arch[,c(time_col, depth_col, temp_col, intemp_col, light_col)]
+        names(arch) <- c('DateTime','depth','temperature','internalTemperature','light')
+        meas.vars <- c('depth','temperature','internalTemperature','light')
+      } else{
+        arch <- arch[,c(time_col, depth_col, temp_col, light_col)]
+        names(arch) <- c('DateTime','depth','temperature','light')
+        meas.vars <- c('depth','temperature','light')
+      }
+
       x <- findDateFormat(arch$DateTime[1:10])
       #arch$DateTime <- as.POSIXct(arch$DateTime, format=x, tz='UTC')
       arch$DateTime <- lubridate::parse_date_time(arch$DateTime, orders=x, tz='UTC')
@@ -752,7 +768,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       #nms[grep('Light', nms, ignore.case = T)] <- 'light'
       #names(arch.new) <- nms
       # summarize with melt
-      arch.new <- reshape2::melt(arch.new, id.vars=c('DateTime'), measure.vars = c('depth','temperature','light'))
+      arch.new <- reshape2::melt(arch.new, id.vars=c('DateTime'), measure.vars = meas.vars)
       arch.new$VariableName <- arch.new$variable
 
       # merge with obs types and do some formatting

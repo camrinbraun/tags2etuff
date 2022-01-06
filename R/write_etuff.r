@@ -65,11 +65,14 @@ write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE,..
     if (class(obsTypes) == 'try-error') stop(paste('obsTypes not specified in function call and unable to automatically download it from github at', url, sep=' '))
 
   }
+  if (names(obsTypes)[1] != 'VariableID') names(obsTypes)[1] <- 'VariableID'
 
   etuff <- etuff[which(etuff$VariableName != 'id'),]
 
-  etuff <- merge(x = etuff, y = obsTypes[ , c('VariableID', 'VariableName', 'VariableUnits')], by = "VariableName", all.x=TRUE)
+  etuff <- base::merge(x = etuff, y = obsTypes[ , c('VariableID', 'VariableName', 'VariableUnits')], by = "VariableName", all.x=TRUE)
   etuff <- etuff[,c('DateTime','VariableID','VariableValue','VariableName','VariableUnits')]
+  etuff <- etuff[order(etuff$DateTime),]
+  etuff <- etuff[which(!is.na(etuff$VariableValue)),]
 
   ## drop those where TAD/TAT bin definitions are arbitrarily assigned timestamps
   #etuff <- etuff[-which(etuff$VariableID >= 301 & etuff$VariableID <= 364 & etuff$DateTime != ''),]
