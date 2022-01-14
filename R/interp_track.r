@@ -26,16 +26,21 @@ interp_track <- function(etuff_file,...){
     res_out <- 24
   }
 
+  if (etuff$meta$instrument_type == 's') etuff$meta$instrument_type <- 'satellite'
+  if (etuff$meta$instrument_type %in% c('PSAT','psat')) etuff$meta$instrument_type <- 'popup'
+  if (!('waypoints_source' %in% names(etuff$meta)) & etuff$meta$instrument_type == 'satellite') etuff$meta$waypoints_source <- 'Argos'
+
+  logger::log_info(paste0('Building interpolated track for instrument_type = ',
+                          etuff$meta$instrument_type, ' and waypoints_source = ',
+                          etuff$meta$waypoints_source, '.'))
+
   #-------------------
   ## raw Argos with LCs
   #-------------------
-  if (etuff$meta$instrument_type == 's'){
-    etuff$meta$instrument_type <- 'satellite'
-  }
-  if (!('waypoints_source' %in% names(etuff$meta)) & etuff$meta$instrument_type == 'satellite') etuff$meta$waypoints_source <- 'Argos'
 
   if (etuff$meta$instrument_type == 'satellite' |
       (etuff$meta$instrument_type == 'popup' & etuff$meta$waypoints_source == 'Argos')){
+
     df <- track
     df$id <- 1
 
@@ -108,7 +113,6 @@ interp_track <- function(etuff_file,...){
     #-------------------
     ## PSAT with modeled locs (i.e. GPE3, HMMoce, etc)
     #-------------------
-    if (etuff$meta$instrument_type %in% c('PSAT','psat')) etuff$meta$instrument_type <- 'popup'
   } else if (etuff$meta$instrument_type %in% c('popup') & etuff$meta$waypoints_source == 'modeled'){
 
     tr <- track %>% select(c('DateTime','latitude','latitudeError','longitude','longitudeError'))
