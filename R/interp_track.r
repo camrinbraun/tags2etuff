@@ -20,9 +20,9 @@ interp_track <- function(etuff_file,...){
   ## temporal res of output track
   if('res_out' %in% args){
     res_out <- args$res_out
-    log_info(paste0('res_out set to ', res_out, ' hours.'))
+    logger::log_info(paste0('res_out set to ', res_out, ' hours.'))
   } else{
-    log_info(paste0('res_out not specified. Fixing temporal resolution of output to 24 hours.'))
+    logger::log_info(paste0('res_out not specified. Fixing temporal resolution of output to 24 hours.'))
     res_out <- 24
   }
 
@@ -48,7 +48,7 @@ interp_track <- function(etuff_file,...){
     idx <- lapply(ssm_fit, function(x) x$converged) %>% do.call(rbind, .)
     if (any(!idx)){
       for (ii in which(!idx)){
-        log_info('Some initial use of fit_ssm() did not converge. Trying other time_step values.')
+        logger::log_info('Some initial use of fit_ssm() did not converge. Trying other time_step values.')
         #df.ii <- foieGras::grab(ssm_fit[[ii]], 'data', as_sf=F)
         df.ii <- df.locs[[ii]]
         #df.ii <- ssm_fit[[ii]]$ssm[[1]]$data
@@ -61,11 +61,11 @@ interp_track <- function(etuff_file,...){
           try_fit <- foieGras::fit_ssm(df.ii, model='crw', time.step = bb, vmax=10, optim='nlminb')
           if (try_fit$converged){
             ssm_fit[[ii]] <- try_fit
-            log_info(paste('Converged on time step', bb, 'hours.'))
+            logger::log_info(paste('Converged on time step', bb, 'hours.'))
             break
           } else if (!try_fit$converged & bb == 24){
-            log_info('None of the alternative time steps resulted in fit_ssm() model convergence.')
-            log_info('Cancelling simulations.')
+            logger::log_info('None of the alternative time steps resulted in fit_ssm() model convergence.')
+            logger::log_info('Cancelling simulations.')
             sim <- FALSE; tmp_out <- NULL
           } else{
             next
@@ -108,6 +108,7 @@ interp_track <- function(etuff_file,...){
     #-------------------
     ## PSAT with modeled locs (i.e. GPE3, HMMoce, etc)
     #-------------------
+    if (etuff$meta$instrument_type %in% c('PSAT','psat')) etuff$meta$instrument_type <- 'popup'
   } else if (etuff$meta$instrument_type %in% c('popup') & etuff$meta$waypoints_source == 'modeled'){
 
     tr <- track %>% select(c('DateTime','latitude','latitudeError','longitude','longitudeError'))
@@ -116,9 +117,9 @@ interp_track <- function(etuff_file,...){
     ## if no temporal resolution is specified, try to detect it (this should nearly always work with a PSAT tag)
     if (!('res_in' %in% args)){
       res_in <- Mode(as.numeric(diff(tr$DateTime), units='hours'))
-      log_info(paste('No temporal resolution specified. Mode of diff(timeseries) yielded ', res_in, ' hours', sep=''))
+      logger::log_info(paste('No temporal resolution specified. Mode of diff(timeseries) yielded ', res_in, ' hours', sep=''))
     } else{
-      log_info(paste('Using specified ', res_in, 'hours as the input of the PSAT track data.', sep=''))
+      logger::log_info(paste('Using specified ', res_in, 'hours as the input of the PSAT track data.', sep=''))
     }
 
     ## fix temporal resolution if doesnt match desired output
@@ -132,7 +133,7 @@ interp_track <- function(etuff_file,...){
         interp_method <- 'interval'
       }
 
-      log_info(paste0('Input PSAT track resolution (', res_in, ' hours) is not equal to desired output (', res_out, ' hours). Coercing using interpolation method ', interp_method, '...'))
+      logger::log_info(paste0('Input PSAT track resolution (', res_in, ' hours) is not equal to desired output (', res_out, ' hours). Coercing using interpolation method ', interp_method, '...'))
 
       if (interp_method == 'SSM'){
         tr$lc <- rep('GL', length.out = nrow(tr))
@@ -145,7 +146,7 @@ interp_track <- function(etuff_file,...){
         idx <- lapply(ssm_fit, function(x) x$converged) %>% do.call(rbind, .)
         if (any(!idx)){
           for (ii in which(!idx)){
-            log_info('Some initial use of fit_ssm() did not converge. Trying other time_step values.')
+            logger::log_info('Some initial use of fit_ssm() did not converge. Trying other time_step values.')
             #df.ii <- foieGras::grab(ssm_fit[[ii]], 'data', as_sf=F)
             df.ii <- df.locs[[ii]]
             #df.ii <- ssm_fit[[ii]]$ssm[[1]]$data
@@ -158,11 +159,11 @@ interp_track <- function(etuff_file,...){
               try_fit <- foieGras::fit_ssm(df.ii, model='crw', time.step = bb, vmax=10, optim='nlminb')
               if (try_fit$converged){
                 ssm_fit[[ii]] <- try_fit
-                log_info(paste('Converged on time step', bb, 'hours.'))
+                logger::log_info(paste('Converged on time step', bb, 'hours.'))
                 break
               } else if (!try_fit$converged & bb == 24){
-                log_info('None of the alternative time steps resulted in fit_ssm() model convergence.')
-                log_info('Cancelling simulations.')
+                logger::log_info('None of the alternative time steps resulted in fit_ssm() model convergence.')
+                logger::log_info('Cancelling simulations.')
                 sim <- FALSE; tmp_out <- NULL
               } else{
                 next
@@ -212,7 +213,7 @@ interp_track <- function(etuff_file,...){
       }
 
     } else if(res_in == res_out){
-      log_info(paste0('Input and output resolution are equal (', res_in, ' and ', res_out, ', respectively. No change needed.'))
+      logger::log_info(paste0('Input and output resolution are equal (', res_in, ' and ', res_out, ', respectively. No change needed.'))
     }
 
 
