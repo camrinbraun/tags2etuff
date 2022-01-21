@@ -44,8 +44,15 @@ interp_track <- function(etuff_file,...){
     df <- track
     df$id <- 1
 
-    df <- df[,c('id','DateTime','argosLC','longitude','latitude')]
-    names(df) <- c('id','date','lc','lon','lat')
+    if ('argosLC' %in% names(df)){
+      df <- df[,c('id','DateTime','argosLC','longitude','latitude')]
+      names(df) <- c('id','date','lc','lon','lat')
+    } else{
+      ## trick foieGras to use GLS method and lonerr/laterr when LCs aren't available
+      df$argosLC <- 'GL'
+      df <- df[,c('id','DateTime','argosLC','longitude','latitude','longitudeError','latitudeError')]
+      names(df) <- c('id','date','lc','lon','lat','lonerr','laterr')
+    }
 
     time_step = 6; bb=6
     df.locs <- split(df, df$id)
