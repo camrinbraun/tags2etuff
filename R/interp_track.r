@@ -34,10 +34,12 @@ interp_track <- function(etuff_file,...){
                           etuff$meta$instrument_type, ' and waypoints_source = ',
                           etuff$meta$waypoints_source, '.'))
 
+  if (is.null(etuff$meta$waypoints_source)) etuff$meta$waypoints_source <- NA
+
   ## determine type of dataset we're dealing with
   if (etuff$meta$instrument_type == 'satellite' |
       (etuff$meta$instrument_type == 'popup' & etuff$meta$waypoints_source == 'Argos')){
-    if ('argosLC' %in% names(df)){
+    if ('argosLC' %in% names(track)){
       type = 1
     } else{
       type = 2
