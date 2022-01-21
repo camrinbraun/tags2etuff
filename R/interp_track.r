@@ -18,7 +18,7 @@ interp_track <- function(etuff_file,...){
   track <- get_track(etuff,...)
 
   ## temporal res of output track
-  if('res_out' %in% args){
+  if('res_out' %in% names(args)){
     res_out <- args$res_out
     logger::log_info(paste0('res_out set to ', res_out, ' hours.'))
   } else{
@@ -34,25 +34,31 @@ interp_track <- function(etuff_file,...){
                           etuff$meta$instrument_type, ' and waypoints_source = ',
                           etuff$meta$waypoints_source, '.'))
 
+  ## determine type of dataset we're dealing with
+  if (etuff$meta$instrument_type == 'satellite' |
+      (etuff$meta$instrument_type == 'popup' & etuff$meta$waypoints_source == 'Argos')){
+    if ('argosLC' %in% names(df)){
+      type = 1
+    } else{
+      type = 2
+    }
+  } else if (etuff$meta$instrument_type %in% c('popup') &
+             etuff$meta$waypoints_source == 'modeled'){
+    type = 2
+  }
+
+
   #-------------------
   ## raw Argos with LCs
   #-------------------
 
-  if (etuff$meta$instrument_type == 'satellite' |
-      (etuff$meta$instrument_type == 'popup' & etuff$meta$waypoints_source == 'Argos')){
+  if (type == 1){
 
     df <- track
     df$id <- 1
 
-    if ('argosLC' %in% names(df)){
-      df <- df[,c('id','DateTime','argosLC','longitude','latitude')]
-      names(df) <- c('id','date','lc','lon','lat')
-    } else{
-      ## trick foieGras to use GLS method and lonerr/laterr when LCs aren't available
-      df$argosLC <- 'GL'
-      df <- df[,c('id','DateTime','argosLC','longitude','latitude','longitudeError','latitudeError')]
-      names(df) <- c('id','date','lc','lon','lat','lonerr','laterr')
-    }
+    df <- df[,c('id','DateTime','argosLC','longitude','latitude')]
+    names(df) <- c('id','date','lc','lon','lat')
 
     time_step = 6; bb=6
     df.locs <- split(df, df$id)
@@ -120,13 +126,13 @@ interp_track <- function(etuff_file,...){
     #-------------------
     ## PSAT with modeled locs (i.e. GPE3, HMMoce, etc)
     #-------------------
-  } else if (etuff$meta$instrument_type %in% c('popup') & etuff$meta$waypoints_source == 'modeled'){
+  } else if (type == 2){
 
     tr <- track %>% select(c('DateTime','latitude','latitudeError','longitude','longitudeError'))
 
     ## check temporal resolution and adjust accordingly
     ## if no temporal resolution is specified, try to detect it (this should nearly always work with a PSAT tag)
-    if (!('res_in' %in% args)){
+    if (!('res_in' %in% names(args))){
       res_in <- Mode(as.numeric(diff(tr$DateTime), units='hours'))
       logger::log_info(paste('No temporal resolution specified. Mode of diff(timeseries) yielded ', res_in, ' hours', sep=''))
     } else{
@@ -138,10 +144,11 @@ interp_track <- function(etuff_file,...){
 
       tr$instrument_name <- etuff$meta$instrument_name
 
-      if ('interp_method' %in% args){
+      if ('interp_method' %in% names(args)){
         interp_method <- args$interp_method
       } else{
-        interp_method <- 'interval'
+        if (res_in < res_out) interp_method <- 'interval'
+        if (res_in > res_out) interp_method <- 'SSM'
       }
 
       logger::log_info(paste0('Input PSAT track resolution (', res_in, ' hours) is not equal to desired output (', res_out, ' hours). Coercing using interpolation method ', interp_method, '...'))
