@@ -234,6 +234,9 @@ interp_track <- function(etuff_file,...){
 
     } else if(res_in == res_out){
       logger::log_info(paste0('Input and output resolution are equal (', res_in, ' and ', res_out, ', respectively. No change needed.'))
+      tr$instrument_name <- etuff$meta$instrument_name
+      tr$platform <- etuff$meta$platform
+      tr <- tr %>% select(c('instrument_name', 'platform','DateTime','latitude','latitudeError','longitude','longitudeError')) %>% as.data.frame()
     }
 
 
