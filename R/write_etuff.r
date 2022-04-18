@@ -20,7 +20,8 @@ write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE,..
     obsTypes <- NULL
   }
 
-  if (class(etuff) != 'etuff') stop('Input etuff object must be of class etuff.')
+  if (class(etuff) != 'etuff' & class(etuff) != 'etuff_archival') stop('Input object must be of class etuff or etuff_archival.')
+
   if (is.null(meta_row)) meta_row <- etuff$meta
 
   ## check meta for issues
@@ -34,9 +35,14 @@ write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE,..
     bins <- NULL
   }
 
-  ## reshape etuff
-  etuff <- reshape2::melt(etuff$etuff, id.vars=c('DateTime'))
-  names(etuff) <- c('DateTime','VariableName','VariableValue')
+  if (class(etuff) == 'etuff'){
+    ## reshape etuff
+    etuff <- reshape2::melt(etuff$etuff, id.vars=c('DateTime'))
+    names(etuff) <- c('DateTime','VariableName','VariableValue')
+
+  } else if (class(etuff) == 'etuff_archival'){
+    etuff <- etuff$etuff
+  }
 
   if (class(etuff$DateTime)[1] != 'POSIXct'){
     etuff <- etuff[which(etuff$DateTime != ''),]
@@ -52,7 +58,6 @@ write_etuff <- function(etuff, meta_row = NULL, etuff_file, check_meta = TRUE,..
     etuff <- rbind(etuff, bins)
   } else{
     etuff$DateTime <- format(etuff$DateTime, '%Y-%m-%d %H:%M:%S', tz='UTC')
-
   }
 
   if (is.null(obsTypes)){

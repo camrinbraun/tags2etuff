@@ -129,6 +129,9 @@ qc_archival_etuff <- function(etuff, meta_row, writePNG = FALSE, map = TRUE, out
   } else if ('sstMedian' %in% names(sst)){
     sst <- sst[,c('DateTime','sstMedian')]
     names(sst)[2] <- 'sst'
+  } else if ('sstMean' %in% names(sst)){
+    sst <- sst[,c('DateTime','sstMean')]
+    names(sst)[2] <- 'sst'
   } else{
     stop('No SST data found.')
   }
