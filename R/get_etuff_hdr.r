@@ -18,6 +18,10 @@ get_etuff_hdr <- function(etuff_file){
 
   for (i in 1:length(x)){
 
+    if (has.invalid.multibyte.string(x[i])){
+      warning('Multibyte string detected in one of the header elements. It is being skipped.')
+      next
+    }
     varName <- stringr::str_trim(
       substr(x[i],
              stringr::str_locate(x[i], ':')[2] + 1,
@@ -40,4 +44,29 @@ get_etuff_hdr <- function(etuff_file){
   varDF$varVal <- as.character(varDF$varVal)
   varDF[c(length(x) + 1),] <- c('skip', skipLines)
   varDF
+}
+
+## from https://stackoverflow.com/questions/35589887/how-to-detect-encoding-problems-that-will-generate-invalid-multibyte-string-er
+has.invalid.multibyte.string  <- function(x, return.elements=F)
+{
+  # determine if "invalid multibyte string" error will be triggered
+  # if return.elements=T, then output is logical along x, otherwise single logical
+  if (is.null(x))
+    return(F)
+  if (return.elements)
+  {
+    n <- length(x)
+    out <- rep(F,n)
+    for (i in 1:n)
+      out[i] <- is.error(try(toupper(x[i]),silent = T))
+  }
+  else
+    out <- mb.is.error(try(toupper(x),silent = T))
+  return(out)
+}
+
+mb.is.error <- function(x)
+{
+  # test output of try()
+  return(class(x)[1]=="try-error")
 }
