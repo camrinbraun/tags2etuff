@@ -60,6 +60,8 @@ read_archival <- function(etuff_file, header = TRUE, metaTypes = NULL){
       ## POSIX requires some auto date formatting
       if (metaTypes$class[which(metaTypes$AttributeName %in% names(hdr)[i])] == 'POSIXct'){
         old_hdr <- hdr[,i]
+        if (names(hdr)[i] == 'datetime_death') next
+
         if (!is.na(as.POSIXct(hdr[,i], format = '%m/%d/%y', tz='UTC'))){
           hdr[,i] <- as.POSIXct(hdr[,i], format = '%m/%d/%y', tz='UTC')
         } else if (!is.na(as.POSIXct(hdr[,i], format = '%Y-%m-%d', tz='UTC'))){
