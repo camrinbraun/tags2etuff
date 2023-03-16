@@ -99,7 +99,7 @@ get_3d <- function(etuff, series = NULL, fG = TRUE,...){
 
   ## sort out series
   if (is.null(series)) series <- get_series(etuff)
-  if (is.na(series)) stop('get_series() failed. Double-check that this eTUFF file or tag dataset has time series data.')
+  if (class(series)[1] != 'data.frame') stop('get_series() failed. Double-check that this eTUFF file or tag dataset has time series data.')
   series <- series[which(!is.na(series$DateTime)),]
   nms <- names(series)
 
