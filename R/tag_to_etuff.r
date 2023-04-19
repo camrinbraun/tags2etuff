@@ -727,6 +727,10 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
         intemp_col <- grep('^Recorder.Temp$', nms)
       }
 
+      if (length(temp_col) == 0 & length(intemp_col) > 0){
+        temp_col <- intemp_col
+        intemp_col <- c()
+      }
       ## for depth use exact "Depth"
       depth_col <- grep('^Depth$', nms)
 

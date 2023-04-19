@@ -32,11 +32,11 @@ get_series <- function(etuff, temp_res = NULL, what_tz = NULL){
 
   ## if no temporal resolution is specified, try to detect it (this should nearly always work with a PSAT tag)
   if (is.null(temp_res)){
-    temp_res <- Mode(as.numeric(diff(series$DateTime)))
+    temp_res <- Mode(as.numeric(unclass(diff(series$DateTime))), na.rm=TRUE)
     print(paste('No temporal resolution specified. Mode of diff(timeseries) yielded ', temp_res, 'seconds.', sep=''))
   }
 
-  series$depth <- as.numeric(series$depth)
+  if (any(names(series) %in% c('depth'))) series$depth <- as.numeric(series$depth)
   if (any(names(series) %in% c('temperature'))) series$temperature <- as.numeric(series$temperature)
   if (any(names(series) %in% c('light'))) series$light <- as.numeric(series$light)
 
