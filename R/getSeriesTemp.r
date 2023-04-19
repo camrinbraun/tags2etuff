@@ -23,22 +23,20 @@ getSeriesTemp <- function(series, pdt, loess, flag = TRUE){
   series$date <- as.Date(series$day, format = '%d-%b-%Y')
   ddates = as.POSIXct(series$date,format = findDateFormat(series$date), tz='GMT') #reads dates as dates
   year = as.numeric(format(ddates, '%Y')) #extracts year
-  series$doy = as.numeric(round(julian(ddates, origin = as.Date(paste(year[1],'-01-01',sep = ''))), digits = 0)) #calculate DOY
+  #series$doy = as.numeric(round(julian(ddates, origin = as.Date(paste(year[1],'-01-01',sep = ''))), digits = 0)) #calculate DOY
+  series$doy <- lubridate::yday(ddates)
   series$row <- round(series$depth, 0) + 1
   series$row[series$row < 0] <- 1
-  series$col <- series$doy - min(pdt$doy) + 1
 
-  series.idx <- which(series$doy <= max(pdt$doy) & series$doy >= min(pdt$doy) & series$col > 0)
-  series.temp <- series[series.idx,]
-  ddates <- ddates[series.idx]
-  #series.temp$temperature <- loess$sm_data[series.temp$row, series.temp$col]
-  #series$temperature[series.idx,] <- series.temp$temperature
-  #series.try <- series.temp[1:100,]
-  #temps <- apply(series.try, function(x) loess$sm_data[x$row, x$col])
+  ## yday / doy calculation was not correct all the time, causing issues. just use lubridate above and its always right.
+  series$col <- series$doy
+
+  ## create dummy series variable to add values to. mostly holdover from old code.
+  series.temp <- series
+
   for(i in 1:length(series.temp[,1])){
 
     add.tmp <- try(loess$sm_data[series.temp$row[i], series.temp$col[i]], TRUE)
-    #print(add.tmp)
     if (length(add.tmp) == 0){
       series.temp$temperature[i] <- NA
     } else if(class(add.tmp) == 'try-error' | is.na(add.tmp)){
@@ -87,7 +85,9 @@ getSeriesTemp <- function(series, pdt, loess, flag = TRUE){
 
   }
 
-  series$temperature[series.idx] <- series.temp$temperature
+  ## put temp values back in series df
+  #series$temperature[series.idx] <- series.temp$temperature
+  series$temperature <- series.temp$temperature
 
   #plot(series$depth, pch = 21, bg = series$temperature)
 
