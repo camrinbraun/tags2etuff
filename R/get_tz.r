@@ -18,7 +18,17 @@ get_tz <- function(etuff, what_tz = NULL){
   #locs <- get_track(etuff)
 
   if (class(etuff) == 'etuff_archival'){
-    locs <- df %>% filter(VariableName %in% c('DateTime','latitude','longitude')) %>% dplyr::select(-c(id)) %>% tidyr::spread(VariableName, VariableValue)
+
+    if ('id' %in% names(df)){
+      locs <- df %>% filter(VariableName %in% c('DateTime','latitude','longitude')) %>%
+        dplyr::select(-c(id)) %>%
+        tidyr::spread(VariableName, VariableValue)
+    } else{
+      locs <- df %>% filter(VariableName %in% c('DateTime','latitude','longitude')) %>%
+        #dplyr::select(-c(id)) %>%
+        tidyr::spread(VariableName, VariableValue)
+    }
+
     locs$longitude <- as.numeric(locs$longitude)
     locs$latitude <- as.numeric(locs$latitude)
     locs <- locs[which(!is.na(locs$latitude)),]

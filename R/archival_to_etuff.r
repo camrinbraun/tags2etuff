@@ -22,7 +22,13 @@ archival_to_etuff <- function(archival, vars){
 
   idx <- unique(unlist(idx))
   archival <- archival[idx,]
-  archival <- archival %>% dplyr::select(-c(id)) %>% tidyr::spread(VariableName, VariableValue)
+
+  if ('id' %in% names(archival)){
+    archival <- archival %>% dplyr::select(-c(id)) %>% tidyr::spread(VariableName, VariableValue)
+  } else{
+    archival <- archival %>% tidyr::spread(VariableName, VariableValue)
+  }
+
   archival <- archival[order(archival$DateTime),]
 
   return(archival)
