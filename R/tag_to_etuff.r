@@ -248,19 +248,43 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
         depth <- gdata::read.xls(fList[fidx], sheet='Press Data', skip=1, header=T)[,1:5] # 5 cols
         temp <- gdata::read.xls(fList[fidx], sheet='Temp Data', skip=1, header=T)[,1:5] # 5 cols
 
-        names(depth) <- c('Date.Time','Press.val.','Gain','Depth.m.','Delta.val.')
-        names(temp) <- c('Date.Time','Temp.val.','Temp.C.','Delta.val.','DeltaLim.Temp')
+        names(depth)[min(grep('date', names(depth), ignore.case = TRUE))] <- 'Date.Time'
+        names(depth)[min(grep('press', names(depth), ignore.case = TRUE))] <- 'Press.val.'
+        names(depth)[min(grep('depth', names(depth), ignore.case = TRUE))] <- 'Depth.m.'
+
+        #names(depth) <- c('Date.Time','Press.val.','Gain','Depth.m.','Delta.val.')
+        #names(temp) <- c('Date.Time','Temp.val.','Temp.C.','Delta.val.','DeltaLim.Temp')
+
+        names(temp)[min(grep('date', names(temp), ignore.case = TRUE))] <- 'Date.Time'
+        names(temp)[max(grep('temp', names(temp), ignore.case = TRUE))] <- 'Temp.C.'
+        if(mean(temp$Temp.C., na.rm=T) > 40){
+          names(temp)[min(grep('temp', names(temp), ignore.case = TRUE))] <- 'Temp.C.'
+          if(mean(temp$Temp.C., na.rm=T) > 40) stop('Auto detection of temperature column in Temp Data sheet of the excel file is unable to find the temperature data.')
+        }
+        #names(temp)[min(grep('depth', names(temp), ignore.case = TRUE))] <- 'Depth.m.'
 
         depth$Date <- as.POSIXct(depth$Date.Time, format='%m/%d/%y %H:%M', tz='UTC')
         depth$Depth <- depth$Depth.m. * -1
         temp$Date <- as.POSIXct(temp$Date.Time, format='%m/%d/%y %H:%M', tz='UTC')
 
       } else if (xl_type == 'xlsx'){
-        depth <- openxlsx::read.xlsx(fList[fidx], sheet='Press Data', startRow = 2)[,1:5] # 5 cols
-        temp <- openxlsx::read.xlsx(fList[fidx], sheet='Temp Data', startRow = 2)[,1:5] # 5 cols
+        depth <- openxlsx::read.xlsx(fList[fidx], sheet='Press Data', startRow = 2)[,1:4] # 5 cols
+        temp <- openxlsx::read.xlsx(fList[fidx], sheet='Temp Data', startRow = 2)[,1:4] # 5 cols
 
-        names(depth) <- c('Date.Time','Press.val.','Gain','Depth.m.','Delta.val.')
-        names(temp) <- c('Date.Time','Temp.val.','Temp.C.','Delta.val.','DeltaLim.Temp')
+        names(depth)[min(grep('date', names(depth), ignore.case = TRUE))] <- 'Date.Time'
+        names(depth)[min(grep('press', names(depth), ignore.case = TRUE))] <- 'Press.val.'
+        names(depth)[min(grep('depth', names(depth), ignore.case = TRUE))] <- 'Depth.m.'
+
+        #names(depth) <- c('Date.Time','Press.val.','Gain','Depth.m.','Delta.val.')
+        #names(temp) <- c('Date.Time','Temp.val.','Temp.C.','Delta.val.','DeltaLim.Temp')
+
+        names(temp)[min(grep('date', names(temp), ignore.case = TRUE))] <- 'Date.Time'
+        names(temp)[max(grep('temp', names(temp), ignore.case = TRUE))] <- 'Temp.C.'
+        if(mean(temp$Temp.C., na.rm=T) > 40){
+          names(temp)[min(grep('temp', names(temp), ignore.case = TRUE))] <- 'Temp.C.'
+          if(mean(temp$Temp.C., na.rm=T) > 40) stop('Auto detection of temperature column in Temp Data sheet of the excel file is unable to find the temperature data.')
+        }
+        #names(temp)[min(grep('depth', names(temp), ignore.case = TRUE))] <- 'Depth.m.'
 
         depth$Date <- as.POSIXct(as.numeric(depth$Date.Time) * 3600 * 24, origin='1899-12-30', tz='UTC')
         depth$Depth <- depth$Depth.m. * -1
