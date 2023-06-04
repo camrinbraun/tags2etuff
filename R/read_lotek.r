@@ -16,6 +16,7 @@ read_lotek <- function(dir){
   ## read time series
   #=======================
   print('Reading time series...')
+  print('Lotek time series files need _00.csv or Dive Log.csv in the file name.')
 
   if (length(grep('_00.csv', fList)) == 1 | length(grep('Dive Log.csv', fList)) == 1){
 
@@ -57,6 +58,7 @@ read_lotek <- function(dir){
   ## read daily log
   #=======================
   print('Reading daily log...')
+  print('Lotek daily files need _01.csv or Day Log.csv in the file name.')
 
   if (length(grep('_01.csv', fList)) == 1 | length(grep('Day Log.csv', fList)) == 1){
 
