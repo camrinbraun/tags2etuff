@@ -628,6 +628,16 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
     if (fe){
       print('Getting PDT data...')
 
+      pdt_head <- data.table::fread(fList[fidx], nrows=5)
+      if ('Discont15' %in% names(pdt_head) & 'V94' %in% names(pdt_head)){
+        pdt_head <- data.table::fread(fList[fidx])#, nrows=5)
+        col_idx <- which(names(pdt_head) == 'Discont15')
+        names(pdt_head)[(col_idx + 1):(col_idx + 5)] <- c('Depth16', 'MinTemp16', 'MaxTemp16', '%Ox16', 'Discont16')
+        old_name <- paste0(substr(fList[fidx], 1, nchar(fList[fidx]) - 4), '-original.csv')
+        file.copy(fList[fidx], old_name)
+        data.table::fwrite(pdt_head, file=fList[fidx])
+      }
+
       pdt <- HMMoce::read.wc(filename = fList[fidx], type = 'pdt', tag = dates[1], pop = dates[2])
 
       # organize pdt.new for flatfile format
@@ -966,6 +976,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       # if file exists we load it
       mmd <- utils::read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
       mmd$dt <- lubridate::parse_date_time(mmd$Date, orders=findDateFormat(mmd$Date), tz='UTC')
+      if (all(is.na(mmd$dt))) mmd$dt <- as.POSIXct(mmd$Date, format=findDateFormat(mmd$Date), tz='UTC')
       mmd <- mmd[which(mmd$dt >= dates[1] & mmd$dt <= dates[2]),]
 
       # organize mmd.new for flatfile format
@@ -1018,15 +1029,19 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       # if file exists we load it
       sst <- utils::read.table(fList[fidx], sep=',', header=T, blank.lines.skip = F)
       sst$dt <- lubridate::parse_date_time(sst$Date, orders=findDateFormat(sst$Date), tz='UTC')
+      if (all(is.na(sst$dt))) sst$dt <- as.POSIXct(sst$Date, format=findDateFormat(sst$Date), tz='UTC')
       sst <- sst[which(sst$dt >= dates[1] & sst$dt <= dates[2]),]
 
-      sst.new <- parse_sst(sst, obsTypes)
+      if (nrow(sst) > 0){
+        sst.new <- parse_sst(sst, obsTypes)
 
-      if (exists('returnData')){
-        returnData <- rbind(returnData, sst.new)
-      } else {
-        returnData <- sst.new
+        if (exists('returnData')){
+          returnData <- rbind(returnData, sst.new)
+        } else {
+          returnData <- sst.new
+        }
       }
+
     } # end fe
 
     if (exists('fe')) rm(fe)
@@ -1127,7 +1142,9 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
 
       histo <- histo[which(!is.na(histo$Sum)),]
       histo$dt <- lubridate::parse_date_time(histo$Date, orders=findDateFormat(histo$Date), tz='UTC')
+      if (all(is.na(histo$dt))) histo$dt <- as.POSIXct(histo$Date, format=findDateFormat(histo$Date), tz='UTC')
       histo <- histo[which(histo$dt >= dates[1] & histo$dt <= dates[2]),]
+      if (nrow(histo) == 0) next
       histo <- subset(histo, select=-c(NumBins))
       #histo <- Filter(function(x)!all(is.na(x)), histo)
 
