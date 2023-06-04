@@ -25,12 +25,15 @@ getSeriesTemp <- function(series, pdt, loess, flag = TRUE){
   #ddates = as.POSIXct(series$date,format = findDateFormat(series$date), tz='GMT') #reads dates as dates
   #year = as.numeric(format(series$datetime, '%Y')) #extracts year
   #series$doy = as.numeric(round(julian(ddates, origin = as.Date(paste(year[1],'-01-01',sep = ''))), digits = 0)) #calculate DOY
-  series$doy <- lubridate::yday(series$datetime)
+  #series$doy <- lubridate::yday(series$datetime)
+  #series$num_day <- lubridate::yday(series$datetime)
   series$row <- round(series$depth, 0) + 1
   series$row[series$row < 0] <- 1
 
   ## yday / doy calculation was not correct all the time, causing issues. just use lubridate above and its always right.
-  series$col <- (series$doy - min(pdt$doy, na.rm=T)) + 1
+  #series$col <- (series$doy - min(pdt$doy, na.rm=T)) + 1
+  #pdt$col <-
+  series$col <- findInterval(as.Date(series$datetime), loess$dates)
 
   ## create dummy series variable to add values to. mostly holdover from old code.
   series.temp <- series

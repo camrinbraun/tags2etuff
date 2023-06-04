@@ -28,14 +28,16 @@ add_series_temp <- function(series, pdt = NULL, pdt_interp = NULL, flag = TRUE){
   }
 
   ## pdt needs doy
-  pdt$doy <- lubridate::yday(pdt$DateTime)
+  pdt$num_day <- as.integer(pdt$DateTime)
+  #pdt$doy <- lubridate::yday(pdt$DateTime)
   ## pdt needs date as posixct
   pdt$date <- pdt$DateTime
 
   ## this is a hack of an old function that works well, so fudge a few vars to match that functions requirements
-  series$day <- format(series$DateTime_local, '%d-%b-%Y')
-  series$date <- series$DateTime_local
-  series$doy <- lubridate::yday(series$DateTime_local)
+  #series$day <- format(series$DateTime_local, '%d-%b-%Y')
+  #series$date <- series$DateTime_local
+  series$num_day <- as.integer(series$DateTime)
+  #series$doy <- lubridate::yday(series$DateTime_local)
   if (!any(names(series) %in% c('temperature'))) series$temperature <- NA
   start_NAs <- length(which(is.na(series$temperature)))
 

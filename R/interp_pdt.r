@@ -16,9 +16,9 @@ interp_pdt <- function(pdt, span_x = 5, span_y = 150){
 
   ## prep the dates
   pdt$date <- as.Date(pdt$DateTime)
-  ddates <- pdt$DateTime
-  year <- as.numeric(format(ddates, '%Y')) #extracts year
-  pdt$doy <- lubridate::yday(pdt$DateTime)
+  #ddates <- pdt$DateTime
+  #year <- as.numeric(format(ddates, '%Y')) #extracts year
+  #pdt$doy <- lubridate::yday(pdt$DateTime)
 
   ## here we use mid-point
   pdt$PdtTempMid <- (pdt$PdtTempMax - pdt$PdtTempMin) / 2 + pdt$PdtTempMin
@@ -26,8 +26,9 @@ interp_pdt <- function(pdt, span_x = 5, span_y = 150){
   pdt <- data.frame(pdt %>% filter(!is.na(PdtDepth)))
 
   # run the LOESS interp
-  results <- grid2dloess(pdt$PdtTempMid, xgrid = pdt$doy, ygrid = pdt$PdtDepth,
+  results <- grid2dloess(pdt$PdtTempMid, xgrid = as.integer(pdt$date), ygrid = pdt$PdtDepth,
                          span_x = span_x, span_y = span_y)
+  results$dates <- as.Date(seq(min(as.integer(pdt$date)), max(as.integer(pdt$date)), by = 1), origin='1970-01-01')
 
   return(results)
 
