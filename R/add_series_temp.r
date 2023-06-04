@@ -38,12 +38,14 @@ add_series_temp <- function(series, pdt = NULL, pdt_interp = NULL, flag = TRUE){
   series$doy <- lubridate::yday(series$DateTime_local)
   if (!any(names(series) %in% c('temperature'))) series$temperature <- NA
   start_NAs <- length(which(is.na(series$temperature)))
+
   series_df <- getSeriesTemp(series, pdt, loess = pdt_interp, flag = flag)
 
   idx <- which(is.na(series$temperature))
   series$temperature[idx] <- series_df$temperature[idx]
+
   name_idx <- which(names(series) %in% c('DateTime_local','DateTime','depth','temperature'))
-  series <- series[,name_idx]
+  #series <- series[,name_idx]
   end_NAs <- length(which(is.na(series$temperature)))
 
   print(paste('Series data started with ', start_NAs, ' NAs and ended with ', end_NAs, ' NAs.', sep=''))

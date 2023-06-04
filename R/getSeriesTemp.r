@@ -20,16 +20,17 @@ getSeriesTemp <- function(series, pdt, loess, flag = TRUE){
 
   # DEAL WITH THE DATES
   names(series) <- tolower(names(series))
-  series$date <- as.Date(series$day, format = '%d-%b-%Y')
-  ddates = as.POSIXct(series$date,format = findDateFormat(series$date), tz='GMT') #reads dates as dates
-  year = as.numeric(format(ddates, '%Y')) #extracts year
+  #series <- series %>% filter(!is.na(depth))
+  #series$date <- as.Date(series$day, format = '%d-%b-%Y')
+  #ddates = as.POSIXct(series$date,format = findDateFormat(series$date), tz='GMT') #reads dates as dates
+  #year = as.numeric(format(series$datetime, '%Y')) #extracts year
   #series$doy = as.numeric(round(julian(ddates, origin = as.Date(paste(year[1],'-01-01',sep = ''))), digits = 0)) #calculate DOY
-  series$doy <- lubridate::yday(ddates)
+  series$doy <- lubridate::yday(series$datetime)
   series$row <- round(series$depth, 0) + 1
   series$row[series$row < 0] <- 1
 
   ## yday / doy calculation was not correct all the time, causing issues. just use lubridate above and its always right.
-  series$col <- series$doy
+  series$col <- (series$doy - min(pdt$doy, na.rm=T)) + 1
 
   ## create dummy series variable to add values to. mostly holdover from old code.
   series.temp <- series
@@ -50,7 +51,7 @@ getSeriesTemp <- function(series, pdt, loess, flag = TRUE){
     }
 
     if(is.na(series.temp$temperature[i])){
-      dt.idx <- which(pdt$date %in% as.Date(ddates[i]))
+      dt.idx <- which(pdt$date %in% as.Date(series.temp$datetime[i]))
       pdt.i <- pdt[dt.idx,]
 
       if(length(pdt.i$depth) > 0){
