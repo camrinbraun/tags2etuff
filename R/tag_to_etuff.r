@@ -1140,6 +1140,12 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
         stop('TAD bins could not be read from file and were not specified in function call. Please specify them and try again.')
       }
 
+      num_tad_bins <- max(histo[which(histo$HistType == 'TAD'), 'NumBins'], na.rm=TRUE)
+      num_tat_bins <- max(histo[which(histo$HistType == 'TAT'), 'NumBins'], na.rm=TRUE)
+
+      if (num_tad_bins != length(tad.lim)) stop('The number of named/labeled TAD bins in -Histos.csv does not match the expected number of bins in the NumBins column of that file. It is likely a column of TAD data is simply missing a column name.')
+      if (num_tat_bins != length(tat.lim)) stop('The number of named/labeled TAT bins in -Histos.csv does not match the expected number of bins in the NumBins column of that file. It is likely a column of TAT data is simply missing a column name.')
+
       histo <- histo[which(!is.na(histo$Sum)),]
       histo$dt <- lubridate::parse_date_time(histo$Date, orders=findDateFormat(histo$Date), tz='UTC')
       if (all(is.na(histo$dt))) histo$dt <- as.POSIXct(histo$Date, format=findDateFormat(histo$Date), tz='UTC')
