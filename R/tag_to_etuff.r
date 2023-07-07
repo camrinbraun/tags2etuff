@@ -25,6 +25,7 @@
 #'   specify this would be in order to work offline.
 #' @param check_meta is logical indicating whether or not to check the etuff file metadata
 #' @param customCols is optional argument that allows custom specification of input columns for input \code{fName}. these custom specs must match the accepted obsTypes
+#' @param ignore_orig_coords is optional argument that indicates whether to ignore manufacturer coordinates. Might use this is you want to ignore coordinates from Microwave .xls file when you're supplying geolocation-based coordinates instead (e.g. kfTrack, HMMoce, etc) or to ignore the -GPE2 file from WC.
 #' @export
 
 tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = NULL,
@@ -37,6 +38,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
   if ('customCols' %in% names(args)) customCols <- args$customCols
   if ('write_direct' %in% names(args)) write_direct <- args$write_direct
   if ('etuff_file' %in% names(args)) etuff_file <- args$etuff_file
+  ignore_orig_coords <- ifelse('ignore_orig_coords' %in% names(args), args$ignore_orig_coords, FALSE)
 
   if ('manufacturer' %in% names(args)){
     manufacturer <- args$manufacturer
@@ -431,7 +433,7 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       fe <- TRUE
     }
 
-    if (fe){
+    if (fe & !ignore_orig_coords){
       print(paste('Reading location data from', fName, '...'))
 
       xl_type <- readxl::excel_format(fList[fidx])
@@ -687,7 +689,8 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       fe <- TRUE
     }
 
-    if (fe){
+    if (fe & !ignore_orig_coords){
+
       print('Getting GPE2 data...')
 
       locs <- read.table(fList[fidx], sep=',', header=T)
@@ -1143,8 +1146,8 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       num_tad_bins <- max(histo[which(histo$HistType == 'TAD'), 'NumBins'], na.rm=TRUE)
       num_tat_bins <- max(histo[which(histo$HistType == 'TAT'), 'NumBins'], na.rm=TRUE)
 
-      if (num_tad_bins != length(tad.lim)) stop('The number of named/labeled TAD bins in -Histos.csv does not match the expected number of bins in the NumBins column of that file. It is likely a column of TAD data is simply missing a column name. If the last bin is missing a name, use the max of the sensor which is usually 2000 meters.')
-      if (num_tat_bins != length(tat.lim)) stop('The number of named/labeled TAT bins in -Histos.csv does not match the expected number of bins in the NumBins column of that file. It is likely a column of TAT data is simply missing a column name. If the last bin is missing a name, use the max of the sensor which is usually 45 degrees')
+      if (num_tad_bins > length(tad.lim)) stop('The number of named/labeled TAD bins in -Histos.csv does not match the expected number of bins in the NumBins column of that file. It is likely a column of TAD data is simply missing a column name. If the last bin is missing a name, use the max of the sensor which is usually 2000 meters.')
+      if (num_tat_bins > length(tat.lim)) stop('The number of named/labeled TAT bins in -Histos.csv does not match the expected number of bins in the NumBins column of that file. It is likely a column of TAT data is simply missing a column name. If the last bin is missing a name, use the max of the sensor which is usually 45 degrees')
 
       histo <- histo[which(!is.na(histo$Sum)),]
       histo$dt <- lubridate::parse_date_time(histo$Date, orders=findDateFormat(histo$Date), tz='UTC')
