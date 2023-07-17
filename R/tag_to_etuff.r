@@ -1160,53 +1160,58 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       tat <- histo[which(histo$HistType == 'TAT'),]
       tat$summaryPeriod <- Mode(difftime(tat$dt[2:nrow(tat)], tat$dt[1:(nrow(tat) - 1)], units='hours'))
       nms <- names(tat)
-      nms[grep('Bin1$', nms)] <- 'TimeAtTempBin01'
-      nms[grep('Bin2$', nms)] <- 'TimeAtTempBin02'
-      nms[grep('Bin3$', nms)] <- 'TimeAtTempBin03'
-      nms[grep('Bin4$', nms)] <- 'TimeAtTempBin04'
-      nms[grep('Bin5$', nms)] <- 'TimeAtTempBin05'
-      nms[grep('Bin6$', nms)] <- 'TimeAtTempBin06'
-      nms[grep('Bin7$', nms)] <- 'TimeAtTempBin07'
-      nms[grep('Bin8$', nms)] <- 'TimeAtTempBin08'
-      nms[grep('Bin9$', nms)] <- 'TimeAtTempBin09'
-      nms[grep('Bin10$', nms)] <- 'TimeAtTempBin10'
-      nms[grep('Bin11$', nms)] <- 'TimeAtTempBin11'
-      nms[grep('Bin12$', nms)] <- 'TimeAtTempBin12'
-      nms[grep('Bin13$', nms)] <- 'TimeAtTempBin13'
-      nms[grep('Bin14$', nms)] <- 'TimeAtTempBin14'
-      nms[grep('Bin15$', nms)] <- 'TimeAtTempBin15'
-      nms[grep('Bin16$', nms)] <- 'TimeAtTempBin16'
+      if (length(tat.lim) >= 1) nms[grep('Bin1$', nms)] <- 'TimeAtTempBin01'
+      if (length(tat.lim) >= 2) nms[grep('Bin2$', nms)] <- 'TimeAtTempBin02'
+      if (length(tat.lim) >= 3) nms[grep('Bin3$', nms)] <- 'TimeAtTempBin03'
+      if (length(tat.lim) >= 4) nms[grep('Bin4$', nms)] <- 'TimeAtTempBin04'
+      if (length(tat.lim) >= 5) nms[grep('Bin5$', nms)] <- 'TimeAtTempBin05'
+      if (length(tat.lim) >= 6) nms[grep('Bin6$', nms)] <- 'TimeAtTempBin06'
+      if (length(tat.lim) >= 7) nms[grep('Bin7$', nms)] <- 'TimeAtTempBin07'
+      if (length(tat.lim) >= 8) nms[grep('Bin8$', nms)] <- 'TimeAtTempBin08'
+      if (length(tat.lim) >= 9) nms[grep('Bin9$', nms)] <- 'TimeAtTempBin09'
+      if (length(tat.lim) >= 10) nms[grep('Bin10$', nms)] <- 'TimeAtTempBin10'
+      if (length(tat.lim) >= 11) nms[grep('Bin11$', nms)] <- 'TimeAtTempBin11'
+      if (length(tat.lim) >= 12) nms[grep('Bin12$', nms)] <- 'TimeAtTempBin12'
+      if (length(tat.lim) >= 13) nms[grep('Bin13$', nms)] <- 'TimeAtTempBin13'
+      if (length(tat.lim) >= 14) nms[grep('Bin14$', nms)] <- 'TimeAtTempBin14'
+      if (length(tat.lim) >= 15) nms[grep('Bin15$', nms)] <- 'TimeAtTempBin15'
+      if (length(tat.lim) >= 16) nms[grep('Bin16$', nms)] <- 'TimeAtTempBin16'
       names(tat) <- nms
-      tat <- Filter(function(x)!all(is.na(x)), tat)
+      tat <- tat %>% dplyr::select(1:max(grep('^TimeAt', nms)), dt, summaryPeriod)
+      #tat <- Filter(function(x)!all(is.na(x)), tat)
 
       tat.new <- reshape2::melt(tat, id.vars=c('dt'),
                                 measure.vars=c(grep('Bin', names(tat)), grep('summaryPeriod', names(tat))))
+      tat.new$value[which(is.na(tat.new$value))] <- 0
 
 
       tad <- histo[which(histo$HistType == 'TAD'),]
       tad$summaryPeriod <- Mode(difftime(tad$dt[2:nrow(tad)], tad$dt[1:(nrow(tad) - 1)], units='hours'))
       nms <- names(tad)
-      nms[grep('Bin1$', nms)] <- 'TimeAtDepthBin01'
-      nms[grep('Bin2$', nms)] <- 'TimeAtDepthBin02'
-      nms[grep('Bin3$', nms)] <- 'TimeAtDepthBin03'
-      nms[grep('Bin4$', nms)] <- 'TimeAtDepthBin04'
-      nms[grep('Bin5$', nms)] <- 'TimeAtDepthBin05'
-      nms[grep('Bin6$', nms)] <- 'TimeAtDepthBin06'
-      nms[grep('Bin7$', nms)] <- 'TimeAtDepthBin07'
-      nms[grep('Bin8$', nms)] <- 'TimeAtDepthBin08'
-      nms[grep('Bin9$', nms)] <- 'TimeAtDepthBin09'
-      nms[grep('Bin10$', nms)] <- 'TimeAtDepthBin10'
-      nms[grep('Bin11$', nms)] <- 'TimeAtDepthBin11'
-      nms[grep('Bin12$', nms)] <- 'TimeAtDepthBin12'
-      nms[grep('Bin13$', nms)] <- 'TimeAtDepthBin13'
-      nms[grep('Bin14$', nms)] <- 'TimeAtDepthBin14'
-      nms[grep('Bin15$', nms)] <- 'TimeAtDepthBin15'
-      nms[grep('Bin16$', nms)] <- 'TimeAtDepthBin16'
+      if (length(tad.lim) >= 1) nms[grep('Bin1$', nms)] <- 'TimeAtDepthBin01'
+      if (length(tad.lim) >= 2) nms[grep('Bin2$', nms)] <- 'TimeAtDepthBin02'
+      if (length(tad.lim) >= 3) nms[grep('Bin3$', nms)] <- 'TimeAtDepthBin03'
+      if (length(tad.lim) >= 4) nms[grep('Bin4$', nms)] <- 'TimeAtDepthBin04'
+      if (length(tad.lim) >= 5) nms[grep('Bin5$', nms)] <- 'TimeAtDepthBin05'
+      if (length(tad.lim) >= 6) nms[grep('Bin6$', nms)] <- 'TimeAtDepthBin06'
+      if (length(tad.lim) >= 7) nms[grep('Bin7$', nms)] <- 'TimeAtDepthBin07'
+      if (length(tad.lim) >= 8) nms[grep('Bin8$', nms)] <- 'TimeAtDepthBin08'
+      if (length(tad.lim) >= 9) nms[grep('Bin9$', nms)] <- 'TimeAtDepthBin09'
+      if (length(tad.lim) >= 10) nms[grep('Bin10$', nms)] <- 'TimeAtDepthBin10'
+      if (length(tad.lim) >= 11) nms[grep('Bin11$', nms)] <- 'TimeAtDepthBin11'
+      if (length(tad.lim) >= 12) nms[grep('Bin12$', nms)] <- 'TimeAtDepthBin12'
+      if (length(tad.lim) >= 13) nms[grep('Bin13$', nms)] <- 'TimeAtDepthBin13'
+      if (length(tad.lim) >= 14) nms[grep('Bin14$', nms)] <- 'TimeAtDepthBin14'
+      if (length(tad.lim) >= 15) nms[grep('Bin15$', nms)] <- 'TimeAtDepthBin15'
+      if (length(tad.lim) >= 16) nms[grep('Bin16$', nms)] <- 'TimeAtDepthBin16'
       names(tad) <- nms
-      tad <- Filter(function(x)!all(is.na(x)), tad)
+      tad <- tad %>% dplyr::select(1:max(grep('^TimeAt', nms)), dt, summaryPeriod)
+      #tad <- Filter(function(x)!all(is.na(x)), tad)
 
       tad.new <- reshape2::melt(tad, id.vars=c('dt'),
                                 measure.vars=c(grep('Bin', names(tad)), grep('summaryPeriod', names(tad))))
+      tad.new$value[which(is.na(tad.new$value))] <- 0
+
       histo.new <- rbind(tat.new, tad.new)
       histo.new$VariableName <- histo.new$variable
 
