@@ -17,13 +17,20 @@ get_srss <- function(etuff){
 
   ## add srss date-times
   for (i in 1:nrow(srss)){
+
+    sr <- maptools::sunriset(cbind(srss$longitude[i], srss$latitude[i]), lubridate::with_tz(srss$DateTime[i], srss$tz[i]), direction = "sunrise", POSIXct.out = TRUE)$time
+    if (as.Date(sr) != as.Date(srss$DateTime[i])) sr <- maptools::sunriset(cbind(srss$longitude[i], srss$latitude[i]), srss$DateTime[i], direction = "sunrise", POSIXct.out = TRUE)$time
+
+    ss <- maptools::sunriset(cbind(srss$longitude[i], srss$latitude[i]), lubridate::with_tz(srss$DateTime[i], srss$tz[i]), direction = "sunset", POSIXct.out = TRUE)$time
+    if (as.Date(ss) != as.Date(srss$DateTime[i])) ss <- maptools::sunriset(cbind(srss$longitude[i], srss$latitude[i]), srss$DateTime[i], direction = "sunset", POSIXct.out = TRUE)$time
+
     if (i == 1){
-      srss$sunrise <- maptools::sunriset(cbind(srss$longitude[i], srss$latitude[i]), lubridate::with_tz(srss$DateTime[i], srss$tz[i]), direction = "sunrise", POSIXct.out = TRUE)$time
-      srss$sunset <- maptools::sunriset(cbind(srss$longitude[i], srss$latitude[i]), lubridate::with_tz(srss$DateTime[i], srss$tz[i]), direction = "sunset", POSIXct.out = TRUE)$time
+      srss$sunrise <- sr
+      srss$sunset <- ss
 
     } else{
-      srss$sunrise[i] <- maptools::sunriset(cbind(srss$longitude[i], srss$latitude[i]), lubridate::with_tz(srss$DateTime[i], srss$tz[i]), direction = "sunrise", POSIXct.out = TRUE)$time
-      srss$sunset[i] <- maptools::sunriset(cbind(srss$longitude[i], srss$latitude[i]), lubridate::with_tz(srss$DateTime[i], srss$tz[i]), direction = "sunset", POSIXct.out = TRUE)$time
+      srss$sunrise[i] <- sr
+      srss$sunset[i] <- ss
 
     }
 
