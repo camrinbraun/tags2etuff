@@ -23,7 +23,7 @@ read_lotek <- function(dir){
     if(length(grep('_00.csv', fList)) == 1) series_file <- fList[grep('_00.csv', fList)]
     if(length(grep('Dive Log.csv', fList)) == 1) series_file <- fList[grep('Dive Log.csv', fList)]
 
-    ts <- data.table::fread(series_file, sep = ',', header = T)
+    ts <- data.table::fread(file=series_file, sep = ',', header = T)
 
     if(length(grep('Dive Log.csv', fList)) == 1){
       ## read header separate in case there are non-UTF chars
@@ -65,7 +65,7 @@ read_lotek <- function(dir){
     if(length(grep('_01.csv', fList)) == 1) daylog_file <- fList[grep('_01.csv', fList)]
     if(length(grep('Day Log.csv', fList)) == 1) daylog_file <- fList[grep('Day Log.csv', fList)]
 
-    dl <- data.table::fread(daylog_file, sep = ',', skip = 1)#, header = F, nrows = 10, blank.lines.skip = F, stringsAsFactors = F)
+    dl <- data.table::fread(file=daylog_file, sep = ',', skip = 1)#, header = F, nrows = 10, blank.lines.skip = F, stringsAsFactors = F)
 
     ## read header separate in case there are non-UTF chars
     x <- scan(daylog_file, what = character(), sep=',', nmax = 100)
@@ -107,7 +107,7 @@ read_lotek <- function(dir){
     daylog_file <- fList[grep('daylog', fList, ignore.case = T)]
 
     ## read without header then add it
-    dl <- data.table::fread(daylog_file, sep = ',')#, header = F, nrows = 10, blank.lines.skip = F, stringsAsFactors = F)
+    dl <- data.table::fread(file=daylog_file, sep = ',')#, header = F, nrows = 10, blank.lines.skip = F, stringsAsFactors = F)
 
     ## read header separate in case there are non-UTF chars
     x <- scan(daylog_file, what = character(), sep=',', nmax = 100)
