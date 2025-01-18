@@ -15,22 +15,27 @@ testDates <- function(x){
 
     if(any(class(dt) == 'try-error') | any(is.na(dt))){
       # attempt to switch date time to time date
-      dt <- suppressWarnings(try(lubridate::parse_date_time(x, orders='HMS ymd', tz='UTC'), TRUE))
+      dt <- suppressWarnings(try(as.POSIXct(x, format=findDateFormat(x), tz='UTC'), TRUE))
 
       if(any(class(dt) == 'try-error') | any(is.na(dt))){
         # attempt to switch date time to time date
-        dt <- suppressWarnings(try(lubridate::parse_date_time(x, orders='HMS dbY', tz='UTC'), TRUE))
+        dt <- suppressWarnings(try(lubridate::parse_date_time(x, orders='HMS ymd', tz='UTC'), TRUE))
 
         if(any(class(dt) == 'try-error') | any(is.na(dt))){
           # attempt to switch date time to time date
-          dt <- suppressWarnings(try(lubridate::parse_date_time(x, orders='mdY HMS', tz='UTC'), TRUE))
+          dt <- suppressWarnings(try(lubridate::parse_date_time(x, orders='HMS dbY', tz='UTC'), TRUE))
 
           if(any(class(dt) == 'try-error') | any(is.na(dt))){
             # attempt to switch date time to time date
-            dt <- suppressWarnings(try(lubridate::parse_date_time(x, orders='mdY HM', tz='UTC'), TRUE))
+            dt <- suppressWarnings(try(lubridate::parse_date_time(x, orders='mdY HMS', tz='UTC'), TRUE))
 
             if(any(class(dt) == 'try-error') | any(is.na(dt))){
-              stop('Tried lubridate, flipTime and HMS ymd orders but unable to figure out datetime format.')
+              # attempt to switch date time to time date
+              dt <- suppressWarnings(try(lubridate::parse_date_time(x, orders='mdY HM', tz='UTC'), TRUE))
+
+              if(any(class(dt) == 'try-error') | any(is.na(dt))){
+                stop('Tried lubridate, flipTime and HMS ymd orders but unable to figure out datetime format.')
+              }
             }
           }
         }
