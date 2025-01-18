@@ -9,9 +9,10 @@
 #'   is automatically downloaded for you. The only reason you may want to
 #'   specify this would be in order to work offline.
 #' @param meta_row is data frame with nrow == 1 containing metadata
+#' @param valid_flag is logical indicating whether to remove values that are considered invalid. If TRUE, only observations with Validity=1 in the input data are retained (default).
 #' @export
 
-lotek_format_ts <- function(ts, dates, obsTypes, meta_row){
+lotek_format_ts <- function(ts, dates, obsTypes, meta_row, valid_flag = TRUE){
 
   measure.vars <- c()
 
@@ -62,6 +63,7 @@ lotek_format_ts <- function(ts, dates, obsTypes, meta_row){
 
   ## filter (dates, bad data, etc)
   ts.new <- ts[which(ts$DateTime >= dates[1] & ts$DateTime <= dates[2]),]
+  if (valid_flag) ts.new <- ts.new %>% filter(Validity == 1)
 
   ## reshape
   ts.new <- reshape2::melt(ts.new, id.vars=c('DateTime'), measure.vars = measure.vars)
