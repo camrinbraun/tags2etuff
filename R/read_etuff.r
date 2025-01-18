@@ -93,7 +93,9 @@ read_etuff <- function(etuff_file, header = TRUE, metaTypes = NULL){
     df <- data.frame(data.table::fread(etuff_file, sep=',', header = T, skip = 0))
   }
 
-  df <- df %>% dplyr::select(-c(VariableID, VariableUnits)) %>% tidyr::spread(VariableName, VariableValue)
+  df <- df %>% dplyr::filter(!is.na(VariableID)) %>%
+    dplyr::select(-c(VariableID, VariableUnits)) %>%
+    tidyr::spread(VariableName, VariableValue)
 
   ## format date time
   names(df)[1] <- 'DateTime'
