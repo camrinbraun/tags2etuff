@@ -862,7 +862,8 @@ tag_to_etuff <- function(dir, meta_row, fName = NULL, tatBins = NULL, tadBins = 
       series <- series[which(series$dt >= dates[1] & series$dt <= dates[2]),]
 
       # organize series.new for flatfile format
-      series.new <- subset(series, select=-c(DepthSensor))
+      series.new <- series
+      if ('DepthSensor' %in% names(series.new)) series.new <- subset(series.new, select=-c(DepthSensor))
       nms <- names(series.new)
       nms[grep('Depth', nms)] <- 'depth'
       nms[grep('DRange', nms)] <- 'depthDelta'
