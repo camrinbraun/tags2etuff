@@ -3,11 +3,12 @@
 #' Extract time-at-depth data as typically contained in -Histos.csv output from Wildlife Computers
 #'
 #' @param etuff is object of class etuff
+#' @param bins is optional vector of depth bins. usually this is not necessary as bins should be specified in the etuff file
 #' @return a dataframe of min/max depth information
 #' @export
 #'
 
-get_tad <- function(etuff){
+get_tad <- function(etuff, bins=NULL){
 
   if (class(etuff) != 'etuff' & class(etuff) != 'etuff_archival') stop('Input object must be of class etuff or etuff_archival.')
 
@@ -45,7 +46,14 @@ get_tad <- function(etuff){
   #                      varying = vars, times = vars, sep='')#, timevar = 'BinNum')
   #tad <- tad[,c('DateTime','time','TimeAtDepthBin')]
 
-  ubins <- etuff$bins[,grep('histdepth', names(etuff$bins), ignore.case = T)]
+  if (!is.null(etuff$bins)){
+    ubins <- etuff$bins[,grep('histdepth', names(etuff$bins), ignore.case = T)]
+  } else if(!is.null(bins)){
+    ubins <- bins
+  } else{
+    stop('etuff$bins is NULL. ')
+  }
+
   bin_id <- unique(substr(names(ubins), 16, 17))
   for (zz in 1:length(bin_id)){
     ## identify min/max for given bin
