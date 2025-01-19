@@ -18,6 +18,7 @@ read_archival <- function(etuff_file, header = TRUE, metaTypes = NULL){
     warning('Some restrictions on metaTypes$Necessity are being relaxed. Provide your own metaTypes input here to keep default necessity values.')
     ## this relaxes some of the previously required meta attributes
     metaTypes$Necessity[which(metaTypes$AttributeID %in% c(3,8,100,101,200,302,400:404,1000))] <- 'recommended'
+    metaTypes <- metaTypes[-which(metaTypes$Category == 'recovery' & metaTypes$AttributeName == 'flag_capture'),]
 
   }
 
