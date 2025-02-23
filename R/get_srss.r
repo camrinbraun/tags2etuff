@@ -19,10 +19,16 @@ get_srss <- function(etuff){
   for (i in 1:nrow(srss)){
 
     sr <- maptools::sunriset(cbind(srss$longitude[i], srss$latitude[i]), lubridate::with_tz(srss$DateTime[i], srss$tz[i]), direction = "sunrise", POSIXct.out = TRUE)$time
-    if (as.Date(sr) != as.Date(srss$DateTime[i])) sr <- maptools::sunriset(cbind(srss$longitude[i], srss$latitude[i]), srss$DateTime[i], direction = "sunrise", POSIXct.out = TRUE)$time
+    if (as.Date(substr(sr, 1, 10)) != as.Date(srss$DateTime[i])){
+      sr <- maptools::sunriset(cbind(srss$longitude[i], srss$latitude[i]), srss$DateTime[i], direction = "sunrise", POSIXct.out = TRUE)$time
+      sr <- lubridate::with_tz(sr, srss$tz[i])
+    }
 
     ss <- maptools::sunriset(cbind(srss$longitude[i], srss$latitude[i]), lubridate::with_tz(srss$DateTime[i], srss$tz[i]), direction = "sunset", POSIXct.out = TRUE)$time
-    if (as.Date(ss) != as.Date(srss$DateTime[i])) ss <- maptools::sunriset(cbind(srss$longitude[i], srss$latitude[i]), srss$DateTime[i], direction = "sunset", POSIXct.out = TRUE)$time
+    if (as.Date(substr(ss, 1, 10)) != as.Date(srss$DateTime[i])){
+      ss <- maptools::sunriset(cbind(srss$longitude[i], srss$latitude[i]), srss$DateTime[i], direction = "sunset", POSIXct.out = TRUE)$time
+      ss <- lubridate::with_tz(ss, srss$tz[i])
+    }
 
     if (i == 1){
       srss$sunrise <- sr
