@@ -15,7 +15,8 @@ add_daynight <- function(series, etuff){
   #if (is.null(series)) series <- get_series(etuff)
 
   ## get sunrise/sunset times
-  srss <- get_srss(etuff)
+  #srss <- get_srss(etuff)
+  srss <- get_srss_st(etuff) ## switch to suntools
 
   ## designate day/night
   dt_local <- series$DateTime_local
